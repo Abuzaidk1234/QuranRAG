@@ -366,7 +366,7 @@ export default function QuranScreen({ navigation }) {
                             ? "pin"
                             : "pin-outline"
                         }
-                        size={22}
+                        size={26}
                         color={THEME.gold}
                       />
                     </TouchableOpacity>
@@ -525,7 +525,7 @@ export default function QuranScreen({ navigation }) {
                           ? "pin"
                           : "pin-outline"
                       }
-                      size={22}
+                      size={26}
                       color={THEME.gold}
                     />
                   </TouchableOpacity>
@@ -599,8 +599,8 @@ export default function QuranScreen({ navigation }) {
               style={{
                 flexDirection: "row",
                 justifyContent: "center",
-                marginTop: 120,
-                marginBottom: 10,
+                marginTop: 95,
+                marginBottom: 5,
                 paddingHorizontal: 20,
               }}
             >
@@ -653,7 +653,8 @@ export default function QuranScreen({ navigation }) {
                   borderColor: THEME.gold,
                 }}
                 onPress={() => {
-                  if (lastRead.type === "surah" || lastRead.type === "ayah") loadSurah(lastRead.id, lastRead.targetAyah);
+                  if (lastRead.type === "surah" || lastRead.type === "ayah")
+                    loadSurah(lastRead.id, lastRead.targetAyah);
                   else loadJuz(lastRead.id);
                 }}
               >
