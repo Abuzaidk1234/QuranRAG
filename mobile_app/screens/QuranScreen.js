@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
@@ -11,6 +11,8 @@ import {
   Image,
   ImageBackground,
   Platform,
+  Modal,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -84,6 +86,34 @@ export default function QuranScreen({ navigation }) {
   const [viewMode, setViewMode] = useState("surah"); // 'surah' or 'juz'
   const [juzs, setJuzs] = useState([]);
   const [juzData, setJuzData] = useState(null);
+  const [lastRead, setLastRead] = useState(null);
+  const scrollViewRef = useRef(null);
+  const ayahPositions = useRef({});
+  const pendingScrollAyah = useRef(null);
+
+  const loadLastRead = async () => {
+    try {
+      const stored = await AsyncStorage.getItem("lastRead");
+      if (stored) setLastRead(JSON.parse(stored));
+    } catch (e) {}
+  };
+
+  const saveLastRead = async (type, id, title, targetAyah = null) => {
+    try {
+      const data = { type, id, title, targetAyah };
+      setLastRead(data);
+      await AsyncStorage.setItem("lastRead", JSON.stringify(data));
+      Alert.alert("Saved", `${title} has been set as your Last Read.`);
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    loadLastRead();
+    const unsubscribe = navigation.addListener("focus", () => {
+      loadLastRead();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const loadBookmarks = async () => {
     try {
@@ -92,6 +122,12 @@ export default function QuranScreen({ navigation }) {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handlePinAyah = (ayah, surahName) => {
+    const sNum = ayah.surahNumber || selectedSurah;
+    const title = `${surahName} (Ayah ${ayah.numberInSurah})`;
+    saveLastRead("ayah", sNum, title, ayah.numberInSurah);
   };
 
   const toggleBookmark = async (ayah, surahName) => {
@@ -121,11 +157,15 @@ export default function QuranScreen({ navigation }) {
   };
 
   const loadJuz = (juzNumber) => {
+    if (!juzNumber) return;
     setLoading(true);
+    setSelectedSurah(null);
+    setSurahData(null);
     axios
       .get(`http://192.168.1.100:8000/quran/juz/${juzNumber}`)
       .then((response) => {
         setJuzData(response.data);
+
         setLoading(false);
       })
       .catch((error) => {
@@ -134,14 +174,32 @@ export default function QuranScreen({ navigation }) {
       });
   };
 
-  const loadSurah = (surahNumber) => {
+  const loadSurah = (surahNumber, targetAyah = null) => {
+    if (!surahNumber) return;
     setLoading(true);
+    setJuzData(null);
+    if (targetAyah) pendingScrollAyah.current = targetAyah;
     axios
       .get("http://192.168.1.100:8000/quran/surah/" + surahNumber)
       .then((response) => {
         setSurahData(response.data);
         setSelectedSurah(surahNumber);
+
         setLoading(false);
+        if (pendingScrollAyah.current) {
+          setTimeout(() => {
+            if (
+              scrollViewRef.current &&
+              ayahPositions.current[pendingScrollAyah.current]
+            ) {
+              scrollViewRef.current.scrollTo({
+                y: ayahPositions.current[pendingScrollAyah.current] - 120,
+                animated: true,
+              });
+            }
+            pendingScrollAyah.current = null;
+          }, 500);
+        }
       })
       .catch((error) => {
         console.error("Failed to load surah details", error);
@@ -295,12 +353,31 @@ export default function QuranScreen({ navigation }) {
                         color={THEME.gold}
                       />
                     </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ marginTop: 15 }}
+                      onPress={() => handlePinAyah(ayah, ayah.surahNameEnglish)}
+                    >
+                      <Ionicons
+                        name={
+                          lastRead?.type === "ayah" &&
+                          lastRead?.title.includes(
+                            `(Ayah ${ayah.numberInSurah})`,
+                          )
+                            ? "pin"
+                            : "pin-outline"
+                        }
+                        size={22}
+                        color={THEME.gold}
+                      />
+                    </TouchableOpacity>
                   </View>
                   <View style={styles.ayahRight}>
                     <Text style={styles.ayahArabic}>
                       {ayah.arabic}{" "}
                       <Text style={{ color: THEME.textMuted }}>
+                        {"\uFD3F"}
                         {toArabicNumber(ayah.numberInSurah)}
+                        {"\uFD3E"}
                       </Text>
                     </Text>
                     <Text style={styles.ayahEnglish}>{ayah.english}</Text>
@@ -311,6 +388,7 @@ export default function QuranScreen({ navigation }) {
           </ScrollView>
         ) : selectedSurah && surahData ? (
           <ScrollView
+            ref={scrollViewRef}
             style={StyleSheet.absoluteFillObject}
             contentContainerStyle={{ paddingTop: 120, paddingBottom: 50 }}
           >
@@ -411,7 +489,14 @@ export default function QuranScreen({ navigation }) {
               )}
 
             {surahData.ayahs.map((ayah, idx) => (
-              <View key={idx} style={styles.ayahRow}>
+              <View
+                key={idx}
+                style={styles.ayahRow}
+                onLayout={(event) => {
+                  ayahPositions.current[ayah.numberInSurah] =
+                    event.nativeEvent.layout.y;
+                }}
+              >
                 <View style={styles.ayahLeft}>
                   <Octagram number={ayah.numberInSurah} size={36} />
                   <TouchableOpacity
@@ -428,13 +513,31 @@ export default function QuranScreen({ navigation }) {
                       color={THEME.gold}
                     />
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ marginTop: 15 }}
+                    onPress={() => handlePinAyah(ayah, surahData.englishName)}
+                  >
+                    <Ionicons
+                      name={
+                        lastRead?.type === "ayah" &&
+                        lastRead?.title ===
+                          `${surahData.englishName} (Ayah ${ayah.numberInSurah})`
+                          ? "pin"
+                          : "pin-outline"
+                      }
+                      size={22}
+                      color={THEME.gold}
+                    />
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.ayahRight}>
                   {/* Arabic text with the ornate end symbol containing the arabic number */}
                   <Text style={styles.ayahArabic}>
                     {ayah.arabic}{" "}
                     <Text style={{ color: THEME.textMuted }}>
+                      {"\uFD3F"}
                       {toArabicNumber(ayah.numberInSurah)}
+                      {"\uFD3E"}
                     </Text>
                   </Text>
                   <Text style={styles.ayahEnglish}>{ayah.english}</Text>
@@ -534,6 +637,50 @@ export default function QuranScreen({ navigation }) {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {lastRead && (
+              <TouchableOpacity
+                style={{
+                  paddingVertical: 10,
+                  backgroundColor: THEME.surface,
+                  marginHorizontal: 20,
+                  marginBottom: 15,
+                  padding: 15,
+                  borderRadius: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: THEME.gold,
+                }}
+                onPress={() => {
+                  if (lastRead.type === "surah" || lastRead.type === "ayah") loadSurah(lastRead.id, lastRead.targetAyah);
+                  else loadJuz(lastRead.id);
+                }}
+              >
+                <Ionicons name="book" size={24} color={THEME.gold} />
+                <View style={{ marginLeft: 15 }}>
+                  <Text
+                    style={{
+                      color: THEME.textMuted,
+                      fontSize: 12,
+                      textTransform: "uppercase",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Continue Reading
+                  </Text>
+                  <Text
+                    style={{ color: THEME.text, fontSize: 14, marginTop: 2 }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {lastRead.title}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }} />
+                <Ionicons name="chevron-forward" size={20} color={THEME.gold} />
+              </TouchableOpacity>
+            )}
             <FlatList
               data={viewMode === "surah" ? surahs : juzs}
               keyExtractor={(item) =>
@@ -604,7 +751,9 @@ export default function QuranScreen({ navigation }) {
       >
         {selectedSurah ? (
           <View style={{ width: "100%" }}>
-            <View style={styles.headerRow}>
+            <View
+              style={[styles.headerRow, { justifyContent: "space-between" }]}
+            >
               <TouchableOpacity onPress={goBack} style={styles.headerBtn}>
                 <Ionicons name="chevron-back" size={28} color={THEME.text} />
                 <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
@@ -673,7 +822,9 @@ export default function QuranScreen({ navigation }) {
           </View>
         ) : juzData ? (
           <View style={{ width: "100%" }}>
-            <View style={styles.headerRow}>
+            <View
+              style={[styles.headerRow, { justifyContent: "space-between" }]}
+            >
               <TouchableOpacity onPress={goBack} style={styles.headerBtn}>
                 <Ionicons name="chevron-back" size={28} color={THEME.text} />
                 <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
@@ -857,7 +1008,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#222",
   },
-  ayahLeft: { width: 50, alignItems: "flex-start", paddingTop: 5 },
+  ayahLeft: { width: 50, alignItems: "center", paddingTop: 5 },
   ayahRight: { flex: 1 },
   ayahArabic: {
     color: THEME.text,

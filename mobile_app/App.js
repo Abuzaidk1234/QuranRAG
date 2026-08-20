@@ -75,6 +75,14 @@ const ChatProvider = ({ children }) => {
     setCurrentSessionId(id);
   };
 
+  const deleteSession = (id) => {
+    const updatedSessions = sessions.filter((s) => s.id !== id);
+    saveSessions(updatedSessions);
+    if (currentSessionId === id) {
+      setCurrentSessionId(null);
+    }
+  };
+
   const updateSessionMessages = (newMessages) => {
     if (!currentSessionId) {
       const newId = Date.now().toString();
@@ -101,6 +109,7 @@ const ChatProvider = ({ children }) => {
         currentSessionId,
         createNewSession,
         switchSession,
+        deleteSession,
         updateSessionMessages,
       }}
     >
@@ -112,8 +121,13 @@ const ChatProvider = ({ children }) => {
 // --- Custom Sidebar (Drawer) ---
 function CustomDrawerContent(props) {
   const activeRoute = props.state.routeNames[props.state.index];
-  const { sessions, currentSessionId, switchSession, createNewSession } =
-    useContext(ChatContext);
+  const {
+    sessions,
+    currentSessionId,
+    switchSession,
+    deleteSession,
+    createNewSession,
+  } = useContext(ChatContext);
 
   return (
     <View style={{ flex: 1, backgroundColor: THEME.bg, padding: 10 }}>
@@ -210,27 +224,43 @@ function CustomDrawerContent(props) {
           </View>
           <ScrollView style={{ maxHeight: 300 }}>
             {sessions.map((s) => (
-              <TouchableOpacity
+              <View
                 key={s.id}
-                onPress={() => {
-                  switchSession(s.id);
-                  props.navigation.navigate("Home");
-                  props.navigation.closeDrawer();
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginVertical: 4,
                 }}
               >
-                <Text
-                  style={[
-                    styles.recentItem,
-                    currentSessionId === s.id && {
-                      color: "#5E9ED6",
-                      fontWeight: "bold",
-                    },
-                  ]}
-                  numberOfLines={1}
+                <TouchableOpacity
+                  style={{ flex: 1, paddingRight: 10 }}
+                  onPress={() => {
+                    switchSession(s.id);
+                    props.navigation.closeDrawer();
+                  }}
                 >
-                  {s.title}
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.recentItem,
+                      { marginVertical: 6 },
+                      currentSessionId === s.id && {
+                        color: "#5E9ED6",
+                        fontWeight: "bold",
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {s.title}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => deleteSession(s.id)}
+                  style={{ padding: 8, opacity: 0.8 }}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#d9534f" />
+                </TouchableOpacity>
+              </View>
             ))}
             {sessions.length === 0 && (
               <Text style={[styles.recentItem, { opacity: 0.5 }]}>

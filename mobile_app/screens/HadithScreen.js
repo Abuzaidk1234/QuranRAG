@@ -23,6 +23,7 @@ const THEME = {
   inputBg: "#346671",
   text: "#ffffff",
   active: "#275862",
+  gold: "#cba153",
 };
 
 export default function HadithScreen({ navigation }) {
@@ -487,6 +488,9 @@ const styles = StyleSheet.create({
     borderRadius: 15,
   },
   hadithHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: THEME.active,
     paddingBottom: 10,
