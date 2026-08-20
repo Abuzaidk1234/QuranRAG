@@ -663,9 +663,7 @@ function HomeScreen({ navigation }) {
               } else {
                 return (
                   <View key={idx} style={styles.aiContainer}>
-                    <Text style={styles.aiText}>
-                      {renderMarkdown(msg.text, styles.aiText)}
-                    </Text>
+                    <Text style={styles.aiText}>{msg.text}</Text>
                     {/* Action Icons Row */}
                     <View style={styles.aiActionRow}>
                       <TouchableOpacity
