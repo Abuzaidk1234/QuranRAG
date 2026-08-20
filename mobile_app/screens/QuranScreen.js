@@ -86,6 +86,24 @@ export default function QuranScreen({ navigation }) {
   const [viewMode, setViewMode] = useState("surah"); // 'surah' or 'juz'
   const [juzs, setJuzs] = useState([]);
   const [juzData, setJuzData] = useState(null);
+
+  useEffect(() => {
+    const backAction = () => {
+      if (selectedSurah || juzData) {
+        setSelectedSurah(null);
+        setSurahData(null);
+        setJuzData(null);
+        return true;
+      }
+      return false;
+    };
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction,
+    );
+    return () => backHandler.remove();
+  }, [selectedSurah, juzData]);
+
   const [lastRead, setLastRead] = useState(null);
   const scrollViewRef = useRef(null);
   const ayahPositions = useRef({});

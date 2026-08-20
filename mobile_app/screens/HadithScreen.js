@@ -42,6 +42,30 @@ export default function HadithScreen({ navigation }) {
   const [searchedHadith, setSearchedHadith] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
 
+  useEffect(() => {
+    const backAction = () => {
+      if (searchedHadith) {
+        setSearchedHadith(null);
+        setSearchQuery("");
+        return true;
+      }
+      if (selectedChapter) {
+        setSelectedChapter(null);
+        return true;
+      }
+      if (selectedBook) {
+        setSelectedBook(null);
+        return true;
+      }
+      return false;
+    };
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction,
+    );
+    return () => backHandler.remove();
+  }, [searchedHadith, selectedChapter, selectedBook]);
+
   const loadBookmarks = async () => {
     try {
       const stored = await AsyncStorage.getItem("bookmarks");
