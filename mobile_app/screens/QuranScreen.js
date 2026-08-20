@@ -13,6 +13,7 @@ import {
   Platform,
   Modal,
   Alert,
+  BackHandler,
 } from "react-native";
 import { SafeAreaView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
