@@ -663,7 +663,9 @@ function HomeScreen({ navigation }) {
               } else {
                 return (
                   <View key={idx} style={styles.aiContainer}>
-                    <Text style={styles.aiText}>{msg.text}</Text>
+                    <Text style={styles.aiText}>
+                      {renderMarkdown(msg.text, styles.aiText)}
+                    </Text>
                     {/* Action Icons Row */}
                     <View style={styles.aiActionRow}>
                       <TouchableOpacity
@@ -798,6 +800,33 @@ function HomeScreen({ navigation }) {
 }
 
 // --- App Root ---
+
+// Helper to parse basic markdown (**bold** and *italic*)
+const renderMarkdown = (text, textStyle) => {
+  if (!text) return null;
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return (
+        <Text key={index} style={[textStyle, { fontWeight: "bold" }]}>
+          {part.slice(2, -2)}
+        </Text>
+      );
+    } else if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+      return (
+        <Text key={index} style={[textStyle, { fontStyle: "italic" }]}>
+          {part.slice(1, -1)}
+        </Text>
+      );
+    }
+    return (
+      <Text key={index} style={textStyle}>
+        {part}
+      </Text>
+    );
+  });
+};
+
 export default function App() {
   let [fontsLoaded] = useFonts({ GreatVibes_400Regular });
 
