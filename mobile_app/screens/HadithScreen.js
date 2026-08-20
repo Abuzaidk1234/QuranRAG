@@ -1,7 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useState, useEffect } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
@@ -17,6 +16,7 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
 
 const THEME = {
@@ -188,7 +188,7 @@ export default function HadithScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {loading ? (
           <ActivityIndicator
@@ -203,7 +203,7 @@ export default function HadithScreen({ navigation }) {
             contentContainerStyle={{
               paddingTop: 110,
               paddingBottom: 50,
-              paddingHorizontal: 20,
+              paddingHorizontal: 25,
             }}
           >
             <View style={styles.hadithContainer}>
@@ -244,7 +244,7 @@ export default function HadithScreen({ navigation }) {
             contentContainerStyle={{
               paddingTop: 110,
               paddingBottom: 50,
-              paddingHorizontal: 20,
+              paddingHorizontal: 25,
             }}
           >
             <View style={styles.searchContainer}>
@@ -336,7 +336,7 @@ export default function HadithScreen({ navigation }) {
             contentContainerStyle={{
               paddingTop: 110,
               paddingBottom: 50,
-              paddingHorizontal: 20,
+              paddingHorizontal: 25,
             }}
           >
             {/* Search Bar for entire book */}
@@ -393,7 +393,7 @@ export default function HadithScreen({ navigation }) {
             contentContainerStyle={{
               paddingTop: 110,
               paddingBottom: 50,
-              paddingHorizontal: 20,
+              paddingHorizontal: 25,
             }}
           >
             <Text style={styles.pageTitle}>Hadith Collections</Text>
@@ -442,7 +442,18 @@ export default function HadithScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity onPress={() => navigation.openDrawer()}>
+          <TouchableOpacity
+            onPress={() => {
+              if (typeof Keyboard !== "undefined") Keyboard.dismiss();
+              navigation.openDrawer();
+            }}
+            style={{
+              width: 40,
+              height: 40,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
             <Image
               source={require("../assets/custom_menu.png")}
               style={{ width: 40, height: 40 }}
@@ -451,7 +462,7 @@ export default function HadithScreen({ navigation }) {
           </TouchableOpacity>
         )}
       </LinearGradient>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -461,9 +472,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     width: "100%",
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === "ios" ? 50 : 30,
-    paddingBottom: 25,
+    paddingHorizontal: 25,
+    paddingTop: Platform.OS === "ios" ? 50 : 50,
+    paddingBottom: 10,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "transparent",
@@ -528,7 +539,9 @@ const styles = StyleSheet.create({
   hadithContainer: {
     marginBottom: 30,
     backgroundColor: THEME.inputBg,
-    padding: 20,
+    paddingHorizontal: 25,
+    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingBottom: 15,
     borderRadius: 15,
   },
   hadithHeader: {
@@ -555,7 +568,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: THEME.inputBg,
     borderRadius: 20,
-    paddingHorizontal: 15,
+    paddingHorizontal: 25,
     paddingVertical: 10,
     marginBottom: 20,
   },

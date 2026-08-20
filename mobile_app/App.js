@@ -1,7 +1,12 @@
 import "react-native-gesture-handler";
-import React, { useState, createContext, useContext, useEffect } from "react";
+import React, {
+  useState,
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+} from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   TextInput,
@@ -11,10 +16,12 @@ import {
   ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Modal,
 } from "react-native";
 
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { LinearGradient } from "expo-linear-gradient";
@@ -290,20 +297,20 @@ function PlaceholderScreen({ route, navigation }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.openDrawer()}
-          style={[
-            styles.headerBtn,
-            {
-              backgroundColor: "#346671",
-              width: 38,
-              height: 38,
-              borderRadius: 18,
-            },
-          ]}
+          onPress={() => {
+            if (typeof Keyboard !== "undefined") Keyboard.dismiss();
+            navigation.openDrawer();
+          }}
+          style={{
+            width: 40,
+            height: 40,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
         >
           <Image
             source={require("./assets/custom_menu.png")}
-            style={{ width: 36, height: 36 }}
+            style={{ width: 40, height: 40 }}
             resizeMode="contain"
           />
         </TouchableOpacity>
@@ -443,52 +450,123 @@ const SearchInputBar = ({
     )}
 
     <View style={styles.searchContainer}>
-      <TouchableOpacity
-        onPress={() => setFilterModalVisible(!filterModalVisible)}
-        style={styles.modeIndicator}
-      >
-        <Text
-          style={[
-            styles.plusIcon,
-            activeFilter !== "all" && { color: "#5E9ED6" },
-          ]}
-        >
-          +
-        </Text>
-        {activeFilter !== "all" && (
-          <Text style={styles.modeIndicatorText}>
-            {activeFilter === "quran" ? "Quran Only" : "Hadith Only"}
-          </Text>
-        )}
-      </TouchableOpacity>
+      {activeFilter !== "all" && (
+        <View style={{ flexDirection: "row", marginBottom: 8 }}>
+          <TouchableOpacity
+            onPress={() => setFilterModalVisible(!filterModalVisible)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "rgba(94, 158, 214, 0.2)",
+              paddingHorizontal: 25,
+              paddingVertical: 4,
+              borderRadius: 12,
+            }}
+          >
+            <Text
+              style={{ color: "#5E9ED6", fontWeight: "bold", fontSize: 13 }}
+            >
+              {activeFilter === "quran" ? "Quran Only" : "Hadith Only"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-      <TextInput
-        style={[styles.searchInput, { minHeight: 24, maxHeight: 100 }]}
-        placeholder={messagesLength === 0 ? "Ask anything" : "Reply..."}
-        placeholderTextColor="#8baeb4"
-        value={query}
-        onChangeText={setQuery}
-        multiline={true}
-      />
-      <TouchableOpacity
-        style={styles.sendButton}
-        onPress={sendMessage}
-        disabled={isLoading}
-      >
-        <Ionicons name="arrow-forward" size={24} color={THEME.text} />
-      </TouchableOpacity>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <TouchableOpacity
+          onPress={() => setFilterModalVisible(!filterModalVisible)}
+          style={{ paddingRight: 12 }}
+        >
+          <Text
+            style={[
+              styles.plusIcon,
+              activeFilter !== "all" && { color: "#5E9ED6" },
+            ]}
+          >
+            +
+          </Text>
+        </TouchableOpacity>
+
+        <TextInput
+          style={[
+            styles.searchInput,
+            { flex: 1, minHeight: 24, maxHeight: 100, padding: 0 },
+          ]}
+          placeholder={messagesLength === 0 ? "Ask anything" : "Reply..."}
+          placeholderTextColor="#8baeb4"
+          value={query}
+          onChangeText={setQuery}
+          multiline={true}
+        />
+        <TouchableOpacity
+          style={[styles.sendButton, { paddingLeft: 10 }]}
+          onPress={sendMessage}
+          disabled={isLoading}
+        >
+          <Ionicons name="arrow-forward" size={24} color={THEME.text} />
+        </TouchableOpacity>
+      </View>
     </View>
   </View>
 );
 
 // --- Main Chat Screen ---
 function HomeScreen({ navigation }) {
+  const scrollViewRef = useRef(null);
+  const messagePositions = useRef({});
+  const lastMessageCount = useRef(0);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      () => setKeyboardVisible(true),
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      "keyboardDidHide",
+      () => setKeyboardVisible(false),
+    );
+    return () => {
+      keyboardDidHideListener.remove();
+      keyboardDidShowListener.remove();
+    };
+  }, []);
+
   const { sessions, currentSessionId, updateSessionMessages } =
     useContext(ChatContext);
 
   // Derive current messages
   const currentSession = sessions.find((s) => s.id === currentSessionId);
   const messages = currentSession ? currentSession.messages : [];
+
+  useEffect(() => {
+    // When a new message pair is added (User + AI blank state)
+    if (messages.length > 0 && messages.length > lastMessageCount.current) {
+      lastMessageCount.current = messages.length;
+
+      // Find the index of the latest user message
+      let latestUserIdx = -1;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === "user") {
+          latestUserIdx = i;
+          break;
+        }
+      }
+
+      if (latestUserIdx !== -1) {
+        // Wait a brief moment for the layout to calculate
+        setTimeout(() => {
+          const yPos = messagePositions.current[latestUserIdx];
+          if (yPos !== undefined && scrollViewRef.current) {
+            // Scroll to the user's question, minus some padding so it sits just under the header
+            scrollViewRef.current.scrollTo({
+              y: Math.max(0, yPos - 20),
+              animated: true,
+            });
+          }
+        }, 150);
+      }
+    }
+  }, [messages.length]);
 
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -522,11 +600,20 @@ function HomeScreen({ navigation }) {
         history: currentHistory,
       });
 
-      let finalAnswer = response.data.answer;
-      finalAnswer = finalAnswer
+      let finalAnswer = response.data.answer || "";
+
+      let cleanedAnswer = finalAnswer
         .replace(/<think>[\s\S]*?<\/think>/g, "")
-        .split("<think>")[0]
         .trim();
+      if (cleanedAnswer.includes("<think>")) {
+        cleanedAnswer = cleanedAnswer.split("<think>")[0].trim();
+      }
+
+      if (!cleanedAnswer) {
+        cleanedAnswer = finalAnswer;
+      }
+
+      finalAnswer = cleanedAnswer;
 
       updateSessionMessages([
         ...newMessages,
@@ -564,11 +651,14 @@ function HomeScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       {messages.length === 0 ? (
         // --- Landing Page View ---
-        <View style={{ flex: 1 }}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           {/* Top Bar (Non-floating) */}
           <View style={styles.header}>
             <TouchableOpacity
-              onPress={() => navigation.openDrawer()}
+              onPress={() => {
+                if (typeof Keyboard !== "undefined") Keyboard.dismiss();
+                navigation.openDrawer();
+              }}
               style={{
                 width: 40,
                 height: 40,
@@ -576,15 +666,6 @@ function HomeScreen({ navigation }) {
                 alignItems: "center",
               }}
             >
-              <View
-                style={{
-                  position: "absolute",
-                  backgroundColor: "#346671",
-                  width: 38,
-                  height: 38,
-                  borderRadius: 19,
-                }}
-              />
               <Image
                 source={require("./assets/custom_menu.png")}
                 style={{ width: 40, height: 40 }}
@@ -592,71 +673,104 @@ function HomeScreen({ navigation }) {
               />
             </TouchableOpacity>
           </View>
-
-          <View style={styles.centerContent}>
+          <View
+            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+          >
             <Text style={styles.greeting}>As-Salamu Alaykum</Text>
-
-            <SearchInputBar
-              filterModalVisible={filterModalVisible}
-              setFilterModalVisible={setFilterModalVisible}
-              activeFilter={activeFilter}
-              setActiveFilter={setActiveFilter}
-              query={query}
-              setQuery={setQuery}
-              messagesLength={messages.length}
-              sendMessage={sendMessage}
-              isLoading={isLoading}
-            />
-
-            {/* Filters */}
-            <View style={styles.filtersContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.filterPill,
-                  activeFilter === "quran" && styles.filterPillActive,
-                ]}
-                onPress={() =>
-                  setActiveFilter(activeFilter === "quran" ? "all" : "quran")
-                }
-              >
-                <FontAwesome5 name="quran" size={14} color={THEME.text} />
-                <Text style={styles.filterText}>Quran specific questions</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.filterPill,
-                  activeFilter === "hadith" && styles.filterPillActive,
-                ]}
-                onPress={() =>
-                  setActiveFilter(activeFilter === "hadith" ? "all" : "hadith")
-                }
-              >
-                <FontAwesome5 name="book" size={14} color={THEME.text} />
-                <Text style={styles.filterText}>Hadith specific questions</Text>
-              </TouchableOpacity>
-            </View>
           </View>
-        </View>
+
+          {/* Floating Bottom Footer (Keyboard avoiding) */}
+          <View style={{ width: "100%" }}>
+            <LinearGradient
+              colors={[
+                "rgba(12, 68, 82, 0)",
+                "rgba(12, 68, 82, 0.9)",
+                "rgba(12, 68, 82, 1)",
+                "rgba(12, 68, 82, 1)",
+              ]}
+              locations={[0, 0.3, 0.5, 1]}
+              style={styles.floatingFooter}
+            >
+              {/* Filters */}
+              <View
+                style={[
+                  styles.filtersContainer,
+                  {
+                    marginTop: 0,
+                    marginBottom: 15,
+                    alignItems: "flex-start",
+                    width: "100%",
+                    maxWidth: 600,
+                    paddingHorizontal: 25,
+                  },
+                ]}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.filterPill,
+                    activeFilter === "quran" && styles.filterPillActive,
+                  ]}
+                  onPress={() =>
+                    setActiveFilter(activeFilter === "quran" ? "all" : "quran")
+                  }
+                >
+                  <FontAwesome5 name="quran" size={14} color={THEME.text} />
+                  <Text style={styles.filterText}>Quran Only</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.filterPill,
+                    activeFilter === "hadith" && styles.filterPillActive,
+                  ]}
+                  onPress={() =>
+                    setActiveFilter(
+                      activeFilter === "hadith" ? "all" : "hadith",
+                    )
+                  }
+                >
+                  <FontAwesome5 name="book" size={14} color={THEME.text} />
+                  <Text style={styles.filterText}>Hadith Only</Text>
+                </TouchableOpacity>
+              </View>
+              <SearchInputBar
+                filterModalVisible={filterModalVisible}
+                setFilterModalVisible={setFilterModalVisible}
+                activeFilter={activeFilter}
+                setActiveFilter={setActiveFilter}
+                query={query}
+                setQuery={setQuery}
+                messagesLength={messages.length}
+                sendMessage={sendMessage}
+                isLoading={isLoading}
+              />
+            </LinearGradient>
+          </View>
+        </KeyboardAvoidingView>
       ) : (
         // --- Active Chat View ---
         // --- Active Chat View ---
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           {/* ScrollView is absolutely positioned to underlap everything */}
           <ScrollView
-            style={{ ...StyleSheet.absoluteFillObject }}
+            ref={scrollViewRef}
+
+            style={{ flex: 1 }}
             contentContainerStyle={{
               paddingTop: 80,
               paddingBottom: 110,
-              paddingHorizontal: 20,
+              paddingHorizontal: 25,
             }}
           >
             {messages.map((msg, idx) => {
               if (msg.role === "user") {
                 return (
-                  <View key={idx} style={styles.userBubble}>
+                  <View
+                    key={idx}
+                    style={styles.userBubble}
+                    onLayout={(e) => {
+                      messagePositions.current[idx] = e.nativeEvent.layout.y;
+                    }}
+                  >
                     <Text style={styles.bubbleText}>{msg.text}</Text>
                   </View>
                 );
@@ -711,7 +825,10 @@ function HomeScreen({ navigation }) {
             style={styles.floatingHeader}
           >
             <TouchableOpacity
-              onPress={() => navigation.openDrawer()}
+              onPress={() => {
+                Keyboard.dismiss();
+                navigation.openDrawer();
+              }}
               style={{
                 width: 40,
                 height: 40,
@@ -737,7 +854,7 @@ function HomeScreen({ navigation }) {
           </LinearGradient>
 
           {/* Floating Bottom Footer (Keyboard avoiding) */}
-          <View style={{ position: "absolute", bottom: 0, width: "100%" }}>
+          <View style={{ width: "100%" }}>
             <LinearGradient
               colors={[
                 "rgba(12, 68, 82, 0)",
@@ -831,22 +948,24 @@ export default function App() {
   if (!fontsLoaded) return null;
 
   return (
-    <ChatProvider>
-      <NavigationContainer>
-        <Drawer.Navigator
-          drawerContent={(props) => <CustomDrawerContent {...props} />}
-          screenOptions={{
-            headerShown: false,
-            drawerStyle: { backgroundColor: THEME.bg, width: 280 },
-          }}
-        >
-          <Drawer.Screen name="Home" component={HomeScreen} />
-          <Drawer.Screen name="ReadQuran" component={QuranScreen} />
-          <Drawer.Screen name="ReadHadiths" component={HadithScreen} />
-          <Drawer.Screen name="Bookmarks" component={BookmarksScreen} />
-        </Drawer.Navigator>
-      </NavigationContainer>
-    </ChatProvider>
+    <SafeAreaProvider>
+      <ChatProvider>
+        <NavigationContainer>
+          <Drawer.Navigator
+            drawerContent={(props) => <CustomDrawerContent {...props} />}
+            screenOptions={{
+              headerShown: false,
+              drawerStyle: { backgroundColor: THEME.bg, width: 280 },
+            }}
+          >
+            <Drawer.Screen name="Home" component={HomeScreen} />
+            <Drawer.Screen name="ReadQuran" component={QuranScreen} />
+            <Drawer.Screen name="ReadHadiths" component={HadithScreen} />
+            <Drawer.Screen name="Bookmarks" component={BookmarksScreen} />
+          </Drawer.Navigator>
+        </NavigationContainer>
+      </ChatProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -854,8 +973,9 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: THEME.bg },
   header: {
-    padding: 20,
-    paddingTop: Platform.OS === "ios" ? 60 : 45,
+    paddingHorizontal: 25,
+    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingBottom: 10,
     flexDirection: "row",
     alignItems: "center",
   },
@@ -863,7 +983,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 25,
   },
   greeting: {
     fontFamily: "GreatVibes_400Regular",
@@ -873,13 +993,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   searchContainer: {
-    flexDirection: "row",
+    flexDirection: "column",
     backgroundColor: THEME.inputBg,
-    borderRadius: 30,
+    borderRadius: 24,
     width: "100%",
     maxWidth: 600,
-    alignItems: "center",
-    paddingHorizontal: 20,
+    alignItems: "stretch",
+    paddingHorizontal: 25,
     paddingVertical: 12,
   },
   searchInput: {
@@ -889,16 +1009,27 @@ const styles = StyleSheet.create({
     outlineStyle: "none",
   },
   sendButton: { padding: 5 },
-  filtersContainer: { marginTop: 20, alignItems: "flex-start" },
+  filtersContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 10,
+    width: "100%",
+  },
   filterPill: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 5,
-    padding: 8,
+    marginVertical: 0,
+    paddingHorizontal: 25,
+    paddingVertical: 8,
     borderRadius: 20,
   },
   filterPillActive: { backgroundColor: THEME.active },
-  filterText: { color: THEME.text, fontWeight: "bold", marginLeft: 10 },
+  filterText: {
+    color: THEME.text,
+    fontWeight: "bold",
+    marginLeft: 6,
+    fontSize: 13,
+  },
 
   // Chat View Styles
   chatArea: { flex: 1 },
@@ -906,7 +1037,7 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.userBubble,
     alignSelf: "flex-end",
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 25,
     borderRadius: 25,
     maxWidth: "80%",
     marginBottom: 20,
@@ -917,7 +1048,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     maxWidth: "95%",
     marginBottom: 25,
-    paddingHorizontal: 5,
+    paddingHorizontal: 25,
   },
   aiText: { color: THEME.text, fontSize: 16, lineHeight: 26 },
   aiActionRow: { flexDirection: "row", marginTop: 12 },
@@ -933,9 +1064,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     width: "100%",
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === "ios" ? 60 : 45, // push down slightly for safe area
-    paddingBottom: 15,
+    paddingHorizontal: 25,
+    paddingTop: Platform.OS === "ios" ? 50 : 20, // push down slightly for safe area
+    paddingBottom: 10,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "transparent",
@@ -970,7 +1101,6 @@ const styles = StyleSheet.create({
     color: THEME.text,
     fontSize: 22,
     fontWeight: "bold",
-    marginTop: -2,
   }, // Removed lineHeight and adjusted top margin for perfect center alignment
 
   inlineFilterPopup: {
@@ -1005,7 +1135,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 20,
-    paddingHorizontal: 15,
+    paddingHorizontal: 25,
   },
   drawerTitle: {
     color: THEME.text,
@@ -1017,14 +1147,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 15,
-    paddingHorizontal: 15,
+    paddingHorizontal: 25,
     borderRadius: 10,
   },
   drawerItemActive: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 15,
-    paddingHorizontal: 15,
+    paddingHorizontal: 25,
     borderRadius: 10,
     backgroundColor: THEME.active,
   },
@@ -1047,7 +1177,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 20,
-    paddingHorizontal: 15,
+    paddingHorizontal: 25,
     borderTopWidth: 1,
     borderColor: "#195563",
   },
@@ -1064,7 +1194,9 @@ const styles = StyleSheet.create({
     width: "90%",
     maxHeight: "80%",
     borderRadius: 20,
-    padding: 20,
+    paddingHorizontal: 25,
+    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingBottom: 15,
   },
   modalHeader: {
     flexDirection: "row",

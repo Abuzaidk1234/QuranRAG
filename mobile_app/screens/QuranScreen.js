@@ -15,8 +15,8 @@ import {
   Alert,
   BackHandler,
 } from "react-native";
-import { SafeAreaView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import axios from "axios";
 
@@ -251,7 +251,7 @@ export default function QuranScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {loading ? (
           <ActivityIndicator
@@ -310,7 +310,7 @@ export default function QuranScreen({ navigation }) {
                             marginBottom: 20,
                             marginTop: -10,
                             direction: "ltr",
-                            paddingHorizontal: 10,
+                            paddingHorizontal: 25,
                           },
                         ]}
                       >
@@ -439,7 +439,7 @@ export default function QuranScreen({ navigation }) {
                     {
                       textAlign: "center",
                       width: "80%",
-                      paddingHorizontal: 10,
+                      paddingHorizontal: 25,
                     },
                   ]}
                   adjustsFontSizeToFit
@@ -465,7 +465,7 @@ export default function QuranScreen({ navigation }) {
                       marginBottom: -10,
                       marginTop: -30,
                       direction: "ltr",
-                      paddingHorizontal: 10,
+                      paddingHorizontal: 25,
                     },
                   ]}
                 >
@@ -575,7 +575,7 @@ export default function QuranScreen({ navigation }) {
                   marginTop: 0,
                   marginBottom: -30,
                   direction: "ltr",
-                  paddingHorizontal: 10,
+                  paddingHorizontal: 25,
                 },
               ]}
             >
@@ -620,7 +620,7 @@ export default function QuranScreen({ navigation }) {
                 justifyContent: "center",
                 marginTop: 95,
                 marginBottom: 5,
-                paddingHorizontal: 20,
+                paddingHorizontal: 25,
               }}
             >
               <TouchableOpacity
@@ -787,7 +787,7 @@ export default function QuranScreen({ navigation }) {
                 styles.surahNavRow,
                 {
                   justifyContent: "space-between",
-                  paddingHorizontal: 15,
+                  paddingHorizontal: 25,
                   paddingBottom: 5,
                 },
               ]}
@@ -857,7 +857,7 @@ export default function QuranScreen({ navigation }) {
                 styles.surahNavRow,
                 {
                   justifyContent: "space-between",
-                  paddingHorizontal: 15,
+                  paddingHorizontal: 25,
                   paddingBottom: 5,
                 },
               ]}
@@ -907,16 +907,16 @@ export default function QuranScreen({ navigation }) {
         ) : (
           <View style={styles.headerRow}>
             <TouchableOpacity
-              onPress={() => navigation.openDrawer()}
-              style={[
-                styles.headerBtn,
-                {
-                  backgroundColor: "#346671",
-                  width: 38,
-                  height: 38,
-                  borderRadius: 20,
-                },
-              ]}
+              onPress={() => {
+                if (typeof Keyboard !== "undefined") Keyboard.dismiss();
+                navigation.openDrawer();
+              }}
+              style={{
+                width: 40,
+                height: 40,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
             >
               <Image
                 source={require("../assets/custom_menu.png")}
@@ -930,7 +930,7 @@ export default function QuranScreen({ navigation }) {
           </View>
         )}
       </LinearGradient>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -961,7 +961,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     width: "100%",
-    paddingTop: Platform.OS === "ios" ? 60 : 45,
+    paddingTop: Platform.OS === "ios" ? 50 : 50,
     backgroundColor: "#0c4452",
     borderBottomWidth: 1,
     borderBottomColor: "#1a505e",
@@ -970,8 +970,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
-    paddingHorizontal: 15,
-    paddingBottom: 15,
+    paddingHorizontal: 25,
+    paddingBottom: 10,
   },
   headerBtn: { flexDirection: "row", alignItems: "center" },
   headerTitle: { color: THEME.text, fontSize: 18, fontWeight: "bold" },
@@ -1016,7 +1016,7 @@ const styles = StyleSheet.create({
   },
   starText: { color: THEME.accent, fontWeight: "bold" },
 
-  bannerContainer: { paddingHorizontal: 20, marginBottom: 20 },
+  bannerContainer: { paddingHorizontal: 25, marginBottom: 20 },
   bannerArabic: { color: THEME.text, fontSize: 20 },
 
   bismillahContainer: { alignItems: "center", marginBottom: 20 },
@@ -1024,7 +1024,9 @@ const styles = StyleSheet.create({
 
   ayahRow: {
     flexDirection: "row",
-    padding: 20,
+    paddingHorizontal: 25,
+    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: "#222",
   },

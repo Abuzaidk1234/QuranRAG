@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
+  Image,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -123,7 +124,10 @@ export default function BookmarksScreen({ navigation }) {
         style={styles.floatingHeader}
       >
         <TouchableOpacity
-          onPress={() => navigation.openDrawer()}
+          onPress={() => {
+            if (typeof Keyboard !== "undefined") Keyboard.dismiss();
+            navigation.openDrawer();
+          }}
           style={{
             width: 40,
             height: 40,
@@ -131,8 +135,11 @@ export default function BookmarksScreen({ navigation }) {
             alignItems: "center",
           }}
         >
-          <View style={styles.menuIconBg} />
-          <Ionicons name="menu" size={24} color={THEME.text} />
+          <Image
+            source={require("../assets/custom_menu.png")}
+            style={{ width: 40, height: 40 }}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           Bookmarks
@@ -146,7 +153,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.bg,
-    paddingTop: Platform.OS === "ios" ? 100 : 80,
+    paddingTop: Platform.OS === "ios" ? 50 : 20,
   },
   toggleContainer: {
     flexDirection: "row",
@@ -169,9 +176,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     width: "100%",
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === "ios" ? 50 : 30,
-    paddingBottom: 15,
+    paddingHorizontal: 25,
+    paddingTop: Platform.OS === "ios" ? 50 : 50,
+    paddingBottom: 10,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: THEME.bg,
