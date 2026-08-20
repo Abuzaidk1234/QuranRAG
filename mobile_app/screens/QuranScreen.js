@@ -363,8 +363,8 @@ export default function QuranScreen({ navigation }) {
                           lastRead?.title.includes(
                             `(Ayah ${ayah.numberInSurah})`,
                           )
-                            ? "pin"
-                            : "pin-outline"
+                            ? "location"
+                            : "location-outline"
                         }
                         size={26}
                         color={THEME.gold}
@@ -522,8 +522,8 @@ export default function QuranScreen({ navigation }) {
                         lastRead?.type === "ayah" &&
                         lastRead?.title ===
                           `${surahData.englishName} (Ayah ${ayah.numberInSurah})`
-                          ? "pin"
-                          : "pin-outline"
+                          ? "location"
+                          : "location-outline"
                       }
                       size={26}
                       color={THEME.gold}
