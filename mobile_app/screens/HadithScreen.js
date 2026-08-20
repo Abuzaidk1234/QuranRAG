@@ -186,6 +186,25 @@ export default function HadithScreen({ navigation }) {
                 <Text style={styles.hadithNumberText}>
                   Hadith {searchedHadith.idInBook}
                 </Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    toggleBookmark(searchedHadith, selectedBook.name, "")
+                  }
+                >
+                  <Ionicons
+                    name={
+                      bookmarks.some(
+                        (b) =>
+                          b.id ===
+                          `hadith_${selectedBook.id}_${searchedHadith.idInBook}`,
+                      )
+                        ? "bookmark"
+                        : "bookmark-outline"
+                    }
+                    size={22}
+                    color={THEME.gold}
+                  />
+                </TouchableOpacity>
               </View>
               <Text style={styles.arabicText}>{searchedHadith.arabic}</Text>
               <Text style={styles.englishText}>
