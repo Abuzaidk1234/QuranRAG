@@ -36,6 +36,7 @@ class ChatRequest(BaseModel):
     query: str
     provider: str = "groq"  # "groq" or "gemini"
     filter: str = "all"     # "all", "quran", or "hadith"
+    language: str = "en"    # "en" or "ur"
     history: list = []      # list of dicts: {"role": "user"/"ai", "text": "..."}
 
 class Source(BaseModel):
@@ -60,7 +61,7 @@ system_prompt = (
     "4. Use a maximum of 1 or 2 core evidences (Quran/Hadith). Do not over-explain.\n"
     "CRITICAL RULE: DO NOT ever mention 'the provided context' or 'these verses state'. Speak as if you inherently know the scriptures. "
     "If the answer cannot be deduced entirely from the context, use your general Islamic knowledge to provide a helpful answer. "
-    "Always cite the Surah/Ayah or Hadith reference.\n\n"
+    "Always cite the Surah/Ayah or Hadith reference.\n{language_directive}\n\n"
     "Context:\n{context}"
 )
 
@@ -154,9 +155,26 @@ async def chat(request: ChatRequest):
             else:
                 langchain_history.append(AIMessage(content=msg.get("text", "")))
         
-        response = retrieval_chain.invoke({"input": request.query, "chat_history": langchain_history})
+        
+        lang_dir = ""
+        if request.language == "ur":
+            lang_dir = "CRITICAL: YOU MUST WRITE YOUR ENTIRE RESPONSE IN URDU (اردو), REGARDLESS OF WHAT LANGUAGE THE USER USED."
+            
+        response = retrieval_chain.invoke({
+            "input": request.query, 
+            "chat_history": langchain_history,
+            "language_directive": lang_dir
+        })
+
         
         answer = response["answer"]
+        if "</think>" in answer:
+            answer = answer.split("</think>")[-1].strip()
+        elif "<think>" in answer:
+            answer = answer.split("<think>")[0].strip()
+            if not answer:
+                answer = "The AI's reasoning took too long and the response was truncated before giving an answer. Please try asking your question again."
+        
         docs = response["context"]
         
         sources = []
@@ -189,7 +207,12 @@ def load_quran_data():
         quran_ara = json.load(f)['data']['surahs']
     with open('data/quran_eng.json', 'r', encoding='utf-8') as f:
         quran_eng = json.load(f)['data']['surahs']
-    return quran_ara, quran_eng
+    try:
+        with open('data/quran_urd.json', 'r', encoding='utf-8') as f:
+            quran_urd = json.load(f)['data']['surahs']
+    except:
+        quran_urd = quran_eng
+    return quran_ara, quran_eng, quran_urd
 
 
 @app.get("/quran/juzs")
@@ -199,7 +222,7 @@ async def get_juzs():
 
 @app.get("/quran/juz/{juz_number}")
 async def get_juz(juz_number: int):
-    quran_ara, quran_eng = load_quran_data()
+    quran_ara, quran_eng, quran_urd = load_quran_data()
     if juz_number < 1 or juz_number > 30:
         raise HTTPException(status_code=404, detail="Juz not found")
         
@@ -224,6 +247,10 @@ async def get_juz(juz_number: int):
                         arabic_text = arabic_text[len(bismillah_prefix_2):]
                 
                 english_text = eng_surah['ayahs'][i]['text']
+                try:
+                    urd_text = quran_urd[surah_idx]['ayahs'][i]['text']
+                except (IndexError, KeyError):
+                    urd_text = english_text
                 
                 juz_ayahs.append({
                     "surahNumber": surah_number,
@@ -232,14 +259,15 @@ async def get_juz(juz_number: int):
                     "numberInSurah": ara_surah['ayahs'][i]['numberInSurah'],
                     "number": ara_surah['ayahs'][i]['number'],
                     "arabic": arabic_text,
-                    "english": english_text
+                    "english": english_text,
+                    "urdu": urd_text
                 })
                 
     return {"juz": juz_number, "ayahs": juz_ayahs}
 
 @app.get("/quran/surahs")
 async def get_surahs():
-    quran_ara, quran_eng = load_quran_data()
+    quran_ara, quran_eng, quran_urd = load_quran_data()
     surahs = []
     for s in quran_ara:
         surahs.append({
@@ -254,7 +282,7 @@ async def get_surahs():
 
 @app.get("/quran/surah/{surah_number}")
 async def get_surah(surah_number: int):
-    quran_ara, quran_eng = load_quran_data()
+    quran_ara, quran_eng, quran_urd = load_quran_data()
     if surah_number < 1 or surah_number > 114:
         raise HTTPException(status_code=404, detail="Surah not found")
         
@@ -274,11 +302,18 @@ async def get_surah(surah_number: int):
             elif arabic_text.startswith(bismillah_prefix_2):
                 arabic_text = arabic_text[len(bismillah_prefix_2):].strip()
                 
+        # Safely get urdu text since quran_urd structure matches quran_ara
+        try:
+            urd_text = quran_urd[surah_number - 1]['ayahs'][i]['text']
+        except (IndexError, KeyError):
+            urd_text = eng_surah['ayahs'][i]['text']
+            
         ayahs.append({
             "numberInSurah": ara_surah['ayahs'][i]['numberInSurah'],
             "number": ara_surah['ayahs'][i]['number'],
             "arabic": arabic_text,
-            "english": eng_surah['ayahs'][i]['text']
+            "english": eng_surah['ayahs'][i]['text'],
+            "urdu": urd_text
         })
         
     return {

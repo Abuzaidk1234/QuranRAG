@@ -36,6 +36,9 @@ import * as Clipboard from "expo-clipboard";
 import QuranScreen from "./screens/QuranScreen";
 import HadithScreen from "./screens/HadithScreen";
 import BookmarksScreen from "./screens/BookmarksScreen";
+import "./i18n";
+import { useTranslation } from "react-i18next";
+import SettingsScreen from "./screens/SettingsScreen";
 
 const Drawer = createDrawerNavigator();
 const THEME = {
@@ -127,6 +130,7 @@ const ChatProvider = ({ children }) => {
 
 // --- Custom Sidebar (Drawer) ---
 function CustomDrawerContent(props) {
+  const { t } = useTranslation();
   const activeRoute = props.state.routeNames[props.state.index];
   const {
     sessions,
@@ -146,10 +150,10 @@ function CustomDrawerContent(props) {
         >
           <Image
             source={require("./assets/custom_menu.png")}
-            style={{ width: 40, height: 40, marginRight: 15 }}
+            style={{ width: 40, height: 40 }}
             resizeMode="contain"
           />
-          <Text style={styles.drawerTitle}>XYZ</Text>
+          <Text style={styles.drawerTitle}>{t("app_name")}</Text>
         </TouchableOpacity>
 
         {/* Nav Items - Dynamic Styling based on active route */}
@@ -167,7 +171,7 @@ function CustomDrawerContent(props) {
             color={THEME.text}
             style={styles.drawerIcon}
           />
-          <Text style={styles.drawerItemText}>Read Quran</Text>
+          <Text style={styles.drawerItemText}>{t("read_quran")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -184,7 +188,7 @@ function CustomDrawerContent(props) {
             color={THEME.text}
             style={styles.drawerIcon}
           />
-          <Text style={styles.drawerItemText}>Read Hadiths</Text>
+          <Text style={styles.drawerItemText}>{t("read_hadiths")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -201,7 +205,7 @@ function CustomDrawerContent(props) {
             color={THEME.text}
             style={styles.drawerIcon}
           />
-          <Text style={styles.drawerItemText}>Bookmarks</Text>
+          <Text style={styles.drawerItemText}>{t("bookmarks")}</Text>
         </TouchableOpacity>
 
         {/* Recent Chats Section */}
@@ -213,7 +217,7 @@ function CustomDrawerContent(props) {
               color={THEME.text}
               style={styles.drawerIcon}
             />
-            <Text style={styles.recentTitle}>Recent Chats</Text>
+            <Text style={styles.recentTitle}>{t("recent_chats")}</Text>
             <TouchableOpacity
               onPress={() => {
                 createNewSession();
@@ -244,6 +248,7 @@ function CustomDrawerContent(props) {
                   style={{ flex: 1, paddingRight: 10 }}
                   onPress={() => {
                     switchSession(s.id);
+                    props.navigation.navigate("Home");
                     props.navigation.closeDrawer();
                   }}
                 >
@@ -282,9 +287,11 @@ function CustomDrawerContent(props) {
         {/* Footer */}
         <View style={styles.drawerFooter}>
           <Ionicons name="person-circle" size={32} color={THEME.text} />
-          <Text style={styles.drawerTitle}>XYZ</Text>
+          <Text style={styles.drawerTitle}>{t("guest_user")}</Text>
           <View style={{ flex: 1 }} />
-          <Ionicons name="settings-sharp" size={24} color={THEME.text} />
+          <TouchableOpacity onPress={() => props.navigation.navigate("Settings")}>
+            <Ionicons name="settings-sharp" size={24} color={THEME.text} />
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     </View>
@@ -298,7 +305,7 @@ function PlaceholderScreen({ route, navigation }) {
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => {
-            if (typeof Keyboard !== "undefined") Keyboard.dismiss();
+            Keyboard.dismiss();
             navigation.openDrawer();
           }}
           style={{
@@ -364,6 +371,7 @@ const SearchInputBar = ({
   messagesLength,
   sendMessage,
   isLoading,
+  t,
 }) => (
   <View style={{ width: "100%", maxWidth: 600, position: "relative" }}>
     {/* Small Inline Popup Menu */}
@@ -391,7 +399,7 @@ const SearchInputBar = ({
               activeFilter === "all" && styles.inlineFilterOptionTextActive,
             ]}
           >
-            Everything
+            {t("everything")}
           </Text>
         </TouchableOpacity>
 
@@ -417,7 +425,7 @@ const SearchInputBar = ({
               activeFilter === "quran" && styles.inlineFilterOptionTextActive,
             ]}
           >
-            Quran Only
+            {t("quran_only")}
           </Text>
         </TouchableOpacity>
 
@@ -443,7 +451,7 @@ const SearchInputBar = ({
               activeFilter === "hadith" && styles.inlineFilterOptionTextActive,
             ]}
           >
-            Hadith Only
+            {t("hadith_only")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -466,7 +474,7 @@ const SearchInputBar = ({
             <Text
               style={{ color: "#5E9ED6", fontWeight: "bold", fontSize: 13 }}
             >
-              {activeFilter === "quran" ? "Quran Only" : "Hadith Only"}
+              {activeFilter === "quran" ? t("quran_only") : t("hadith_only")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -492,7 +500,7 @@ const SearchInputBar = ({
             styles.searchInput,
             { flex: 1, minHeight: 24, maxHeight: 100, padding: 0 },
           ]}
-          placeholder={messagesLength === 0 ? "Ask anything" : "Reply..."}
+          placeholder={messagesLength === 0 ? t("ask_anything") : t("reply")}
           placeholderTextColor="#8baeb4"
           value={query}
           onChangeText={setQuery}
@@ -512,6 +520,7 @@ const SearchInputBar = ({
 
 // --- Main Chat Screen ---
 function HomeScreen({ navigation }) {
+  const { t, i18n } = useTranslation();
   const scrollViewRef = useRef(null);
   const messagePositions = useRef({});
   const lastMessageCount = useRef(0);
@@ -597,6 +606,7 @@ function HomeScreen({ navigation }) {
         query: userText,
         provider: "groq",
         filter: activeFilter,
+        language: i18n.language,
         history: currentHistory,
       });
 
@@ -656,7 +666,7 @@ function HomeScreen({ navigation }) {
           <View style={styles.header}>
             <TouchableOpacity
               onPress={() => {
-                if (typeof Keyboard !== "undefined") Keyboard.dismiss();
+                Keyboard.dismiss();
                 navigation.openDrawer();
               }}
               style={{
@@ -676,7 +686,7 @@ function HomeScreen({ navigation }) {
           <View
             style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
           >
-            <Text style={styles.greeting}>As-Salamu Alaykum</Text>
+            <Text style={styles.greeting}>{t("greeting")}</Text>
           </View>
 
           {/* Floating Bottom Footer (Keyboard avoiding) */}
@@ -715,7 +725,7 @@ function HomeScreen({ navigation }) {
                   }
                 >
                   <FontAwesome5 name="quran" size={14} color={THEME.text} />
-                  <Text style={styles.filterText}>Quran Only</Text>
+                  <Text style={styles.filterText}>{t("quran_only")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -729,10 +739,10 @@ function HomeScreen({ navigation }) {
                   }
                 >
                   <FontAwesome5 name="book" size={14} color={THEME.text} />
-                  <Text style={styles.filterText}>Hadith Only</Text>
+                  <Text style={styles.filterText}>{t("hadith_only")}</Text>
                 </TouchableOpacity>
               </View>
-              <SearchInputBar
+              <SearchInputBar t={t}
                 filterModalVisible={filterModalVisible}
                 setFilterModalVisible={setFilterModalVisible}
                 activeFilter={activeFilter}
@@ -789,7 +799,7 @@ function HomeScreen({ navigation }) {
                           size={16}
                           color="#8baeb4"
                         />
-                        <Text style={styles.actionText}>Sources</Text>
+                        <Text style={styles.actionText}>{t("sources")}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.actionIcon}
@@ -800,7 +810,7 @@ function HomeScreen({ navigation }) {
                           size={16}
                           color="#8baeb4"
                         />
-                        <Text style={styles.actionText}>Copy</Text>
+                        <Text style={styles.actionText}>{t("copy")}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -865,7 +875,7 @@ function HomeScreen({ navigation }) {
               locations={[0, 0.3, 0.5, 1]}
               style={styles.floatingFooter}
             >
-              <SearchInputBar
+              <SearchInputBar t={t}
                 filterModalVisible={filterModalVisible}
                 setFilterModalVisible={setFilterModalVisible}
                 activeFilter={activeFilter}
@@ -890,7 +900,7 @@ function HomeScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>References & Sources</Text>
+              <Text style={styles.modalTitle}>{t("references_sources")}</Text>
               <TouchableOpacity onPress={() => setSourcesModalVisible(false)}>
                 <Ionicons name="close" size={24} color={THEME.text} />
               </TouchableOpacity>
@@ -962,6 +972,7 @@ export default function App() {
             <Drawer.Screen name="ReadQuran" component={QuranScreen} />
             <Drawer.Screen name="ReadHadiths" component={HadithScreen} />
             <Drawer.Screen name="Bookmarks" component={BookmarksScreen} />
+            <Drawer.Screen name="Settings" component={SettingsScreen} />
           </Drawer.Navigator>
         </NavigationContainer>
       </ChatProvider>
@@ -986,8 +997,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
   },
   greeting: {
-    fontFamily: "GreatVibes_400Regular",
-    fontSize: 45,
+    fontSize: 32,
+    fontWeight: "bold",
     color: THEME.text,
     marginBottom: 40,
     textAlign: "center",
@@ -996,6 +1007,8 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     backgroundColor: THEME.inputBg,
     borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.15)",
     width: "100%",
     maxWidth: 600,
     alignItems: "stretch",
@@ -1061,6 +1074,7 @@ const styles = StyleSheet.create({
   },
 
   floatingHeader: {
+    zIndex: 10,
     position: "absolute",
     top: 0,
     width: "100%",
@@ -1109,6 +1123,8 @@ const styles = StyleSheet.create({
     left: 35, // Pushed slightly right to align with text
     backgroundColor: THEME.inputBg,
     borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.15)",
     padding: 10,
     width: 170, // Slightly wider to fit icons
     zIndex: 10,
@@ -1139,9 +1155,9 @@ const styles = StyleSheet.create({
   },
   drawerTitle: {
     color: THEME.text,
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
-    marginLeft: 15,
+    marginLeft: 12,
   },
   drawerItem: {
     flexDirection: "row",
@@ -1178,8 +1194,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 20,
     paddingHorizontal: 25,
-    borderTopWidth: 1,
-    borderColor: "#195563",
   },
 
   // Modal Styles

@@ -12,6 +12,7 @@ import {
   TextInput,
   Alert,
   BackHandler,
+  Keyboard,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -27,7 +28,10 @@ const THEME = {
   gold: "#cba153",
 };
 
+import { useTranslation } from "react-i18next";
+
 export default function HadithScreen({ navigation }) {
+  const { t, i18n } = useTranslation();
   const [books, setBooks] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -96,9 +100,10 @@ export default function HadithScreen({ navigation }) {
           ...bookmarks,
           {
             id,
-            title: `${bookName} - Hadith ${hadith.idInBook}`,
+            title: `${bookName} - ${t("hadith_number", {number: hadith.idInBook})}`,
             arabic: hadith.arabic,
-            english: hadith.english?.text || hadith.english,
+            english: hadith.english?.text || hadith.english || hadith.text,
+        urdu: hadith.urdu,
           },
         ];
       }
@@ -209,7 +214,7 @@ export default function HadithScreen({ navigation }) {
             <View style={styles.hadithContainer}>
               <View style={styles.hadithHeader}>
                 <Text style={styles.hadithNumberText}>
-                  Hadith {searchedHadith.idInBook}
+                  {t("hadith_number", {number: searchedHadith.idInBook})}
                 </Text>
                 <TouchableOpacity
                   onPress={() =>
@@ -233,7 +238,7 @@ export default function HadithScreen({ navigation }) {
               </View>
               <Text style={styles.arabicText}>{searchedHadith.arabic}</Text>
               <Text style={styles.englishText}>
-                {searchedHadith.english?.text || searchedHadith.english}
+                {i18n.language === "ur" ? (searchedHadith.urdu || "اردو ترجمہ دستیاب نہیں ہے۔") : (searchedHadith.english?.text || searchedHadith.english || searchedHadith.text)}
               </Text>
             </View>
           </ScrollView>
@@ -256,7 +261,7 @@ export default function HadithScreen({ navigation }) {
               />
               <TextInput
                 style={styles.searchInput}
-                placeholder={`Search ${selectedChapter.english}...`}
+                placeholder={`${t("search")} ${t(selectedChapter.english)}...`}
                 placeholderTextColor="#8baeb4"
                 keyboardType="numeric"
                 value={chapterSearchQuery}
@@ -282,7 +287,7 @@ export default function HadithScreen({ navigation }) {
                 color: "#8baeb4",
               }}
             >
-              Valid range: {hadiths.length > 0 ? hadiths[0].idInBook : 0} to{" "}
+              {t("valid_range")} {hadiths.length > 0 ? hadiths[0].idInBook : 0} {t("to")}{" "}
               {hadiths.length > 0 ? hadiths[hadiths.length - 1].idInBook : 0}
             </Text>
 
@@ -296,7 +301,7 @@ export default function HadithScreen({ navigation }) {
                 <View key={idx} style={styles.hadithContainer}>
                   <View style={styles.hadithHeader}>
                     <Text style={styles.hadithNumberText}>
-                      Hadith {hadith.idInBook}
+                      {t("hadith_number", {number: hadith.idInBook})}
                     </Text>
                     <TouchableOpacity
                       onPress={() =>
@@ -324,7 +329,7 @@ export default function HadithScreen({ navigation }) {
                   </View>
                   <Text style={styles.arabicText}>{hadith.arabic}</Text>
                   <Text style={styles.englishText}>
-                    {hadith.english?.text || hadith.english}
+                    {i18n.language === "ur" ? (hadith.urdu || "اردو ترجمہ دستیاب نہیں ہے۔") : (hadith.english?.text || hadith.english || hadith.text)}
                   </Text>
                 </View>
               ))}
@@ -349,7 +354,7 @@ export default function HadithScreen({ navigation }) {
               />
               <TextInput
                 style={styles.searchInput}
-                placeholder={`Search by number`}
+                placeholder={t("search_by_number")}
                 placeholderTextColor="#8baeb4"
                 keyboardType="numeric"
                 value={searchQuery}
@@ -364,7 +369,7 @@ export default function HadithScreen({ navigation }) {
               )}
             </View>
 
-            <Text style={styles.pageTitle}>{selectedBook.name}</Text>
+            <Text style={[styles.pageTitle, {textAlign: "left"}]}>{t(selectedBook.id)}</Text>
             {chapters.map((chapter) => (
               <TouchableOpacity
                 key={chapter.id}
@@ -376,9 +381,9 @@ export default function HadithScreen({ navigation }) {
                     <Text style={styles.listBadgeText}>{chapter.id}</Text>
                   </View>
                   <View style={styles.listTextContainer}>
-                    <Text style={styles.listTitle}>{chapter.english}</Text>
+                    <Text style={[styles.listTitle, {textAlign: "left"}]}>{t(chapter.english)}</Text>
                     {chapter.range ? (
-                      <Text style={styles.listSubtitle}>{chapter.range}</Text>
+                      <Text style={[styles.listSubtitle, {textAlign: "left"}]}>{chapter.range.includes("No hadiths") ? t("no_hadiths") : chapter.range.replace("Hadiths", t("hadiths"))}</Text>
                     ) : null}
                   </View>
                 </View>
@@ -396,7 +401,7 @@ export default function HadithScreen({ navigation }) {
               paddingHorizontal: 25,
             }}
           >
-            <Text style={styles.pageTitle}>Hadith Collections</Text>
+            <Text style={[styles.pageTitle, {textAlign: "left"}]}>{t('hadith_collections')}</Text>
             {books.map((book, idx) => (
               <TouchableOpacity
                 key={book.id}
@@ -407,10 +412,10 @@ export default function HadithScreen({ navigation }) {
                   <Text style={styles.listBadgeText}>{idx + 1}</Text>
                 </View>
                 <View style={styles.listTextContainer}>
-                  <Text style={styles.listTitle}>{book.name}</Text>
+                  <Text style={[styles.listTitle, {textAlign: "left"}]}>{t(book.id)}</Text>
                   {book.total_hadiths ? (
-                    <Text style={styles.listSubtitle}>
-                      ({book.total_hadiths} Hadiths)
+                    <Text style={[styles.listSubtitle, {textAlign: "left"}]}>
+                      ({t("hadiths_count", {count: book.total_hadiths})})
                     </Text>
                   ) : null}
                 </View>
@@ -433,18 +438,18 @@ export default function HadithScreen({ navigation }) {
         {selectedBook ? (
           <TouchableOpacity onPress={goBack} style={styles.headerRow}>
             <Ionicons name="arrow-back" size={28} color={THEME.text} />
-            <Text style={styles.headerTitle} numberOfLines={1}>
+            <Text style={[styles.headerTitle, {textAlign: "left"}]} numberOfLines={1}>
               {searchedHadith
-                ? `Hadith ${searchedHadith.idInBook}`
+                ? t("hadith_number", {number: searchedHadith.idInBook})
                 : selectedChapter
                   ? selectedChapter.english
-                  : selectedBook.name}
+                  : t(selectedBook.id)}
             </Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             onPress={() => {
-              if (typeof Keyboard !== "undefined") Keyboard.dismiss();
+              Keyboard.dismiss();
               navigation.openDrawer();
             }}
             style={{
@@ -469,6 +474,7 @@ export default function HadithScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: THEME.bg },
   floatingHeader: {
+    zIndex: 10,
     position: "absolute",
     top: 0,
     width: "100%",

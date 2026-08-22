@@ -14,6 +14,7 @@ import {
   Modal,
   Alert,
   BackHandler,
+  Keyboard,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -74,7 +75,10 @@ const Octagram = ({ number, size = 32 }) => {
   );
 };
 
+import { useTranslation } from "react-i18next";
+
 export default function QuranScreen({ navigation }) {
+  const { t, i18n } = useTranslation();
   const [surahs, setSurahs] = useState([]);
   const [selectedSurah, setSelectedSurah] = useState(null);
   const [surahData, setSurahData] = useState(null);
@@ -164,6 +168,7 @@ export default function QuranScreen({ navigation }) {
           title: `${surahName} - Ayah ${ayah.numberInSurah}`,
           arabic: ayah.arabic,
           english: ayah.english,
+        urdu: ayah.urdu,
         };
         updatedBookmarks = [...bookmarks, newBookmark];
       }
@@ -399,7 +404,9 @@ export default function QuranScreen({ navigation }) {
                         {"\uFD3E"}
                       </Text>
                     </Text>
-                    <Text style={styles.ayahEnglish}>{ayah.english}</Text>
+                    <Text style={styles.ayahEnglish}>
+              {i18n.language === "ur" ? (ayah.urdu && ayah.urdu.trim() !== "" ? ayah.urdu : ayah.english) : ayah.english}
+            </Text>
                   </View>
                 </View>
               </View>
@@ -559,7 +566,9 @@ export default function QuranScreen({ navigation }) {
                       {"\uFD3E"}
                     </Text>
                   </Text>
-                  <Text style={styles.ayahEnglish}>{ayah.english}</Text>
+                  <Text style={styles.ayahEnglish}>
+              {i18n.language === "ur" ? (ayah.urdu && ayah.urdu.trim() !== "" ? ayah.urdu : ayah.english) : ayah.english}
+            </Text>
                 </View>
               </View>
             ))}
@@ -618,7 +627,7 @@ export default function QuranScreen({ navigation }) {
               style={{
                 flexDirection: "row",
                 justifyContent: "center",
-                marginTop: 95,
+                marginTop: 65,
                 marginBottom: 5,
                 paddingHorizontal: 25,
               }}
@@ -636,7 +645,7 @@ export default function QuranScreen({ navigation }) {
                     viewMode === "surah" && styles.toggleBtnTextActive,
                   ]}
                 >
-                  Surahs
+                  {t('surahs')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -652,7 +661,7 @@ export default function QuranScreen({ navigation }) {
                     viewMode === "juz" && styles.toggleBtnTextActive,
                   ]}
                 >
-                  Juz
+                  {t('juz')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -685,16 +694,17 @@ export default function QuranScreen({ navigation }) {
                       fontSize: 12,
                       textTransform: "uppercase",
                       fontWeight: "bold",
+                      textAlign: "left",
                     }}
                   >
-                    Continue Reading
+                    {t('continue_reading')}
                   </Text>
                   <Text
-                    style={{ color: THEME.text, fontSize: 14, marginTop: 2 }}
+                    style={{ color: THEME.text, fontSize: 14, marginTop: 2, textAlign: "left" }}
                     numberOfLines={1}
                     adjustsFontSizeToFit
                   >
-                    {lastRead.title}
+                    {lastRead.title.replace(/^[^\(]+/, match => t(match.trim()) + " ")}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }} />
@@ -719,9 +729,9 @@ export default function QuranScreen({ navigation }) {
                     >
                       <Octagram number={item.number} size={38} />
                       <View style={styles.listTextContainer}>
-                        <Text style={styles.listTitle}>{item.englishName}</Text>
-                        <Text style={styles.listSubtitle}>
-                          {item.revelationType} | {item.numberOfAyahs} VERSES
+                        <Text style={[styles.listTitle, {textAlign: "left"}]}>{t(item.englishName)}</Text>
+                        <Text style={[styles.listSubtitle, {textAlign: "left"}]}>
+                          {item.revelationType === 'MECCAN' ? t('meccan') : t('medinan')} | {item.numberOfAyahs} {t('verses')}
                         </Text>
                       </View>
                       <Text
@@ -741,8 +751,8 @@ export default function QuranScreen({ navigation }) {
                     >
                       <Octagram number={item.id} size={38} />
                       <View style={styles.listTextContainer}>
-                        <Text style={styles.listTitle}>{item.name}</Text>
-                        <Text style={styles.listSubtitle}>PART {item.id}</Text>
+                        <Text style={[styles.listTitle, {textAlign: "left"}]}>{viewMode === "surah" ? t(item.englishName) : `${t("juz")} ${item.id}`}</Text>
+                        <Text style={[styles.listSubtitle, {textAlign: "left"}]}>{t("part")} {item.id}</Text>
                       </View>
                       <Text
                         style={[styles.listArabic, { maxWidth: "40%" }]}
@@ -777,7 +787,7 @@ export default function QuranScreen({ navigation }) {
               <TouchableOpacity onPress={goBack} style={styles.headerBtn}>
                 <Ionicons name="chevron-back" size={28} color={THEME.text} />
                 <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
-                  {surahData?.englishName || "Loading..."}
+                  {(surahData?.englishName ? t(surahData.englishName) : "Loading...")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -804,7 +814,7 @@ export default function QuranScreen({ navigation }) {
                   ellipsizeMode="tail"
                 >
                   {selectedSurah < 114 && surahs[selectedSurah]
-                    ? "« " + surahs[selectedSurah].englishName
+                    ? "« " + t(surahs[selectedSurah].englishName)
                     : ""}
                 </Text>
               </TouchableOpacity>
@@ -818,7 +828,7 @@ export default function QuranScreen({ navigation }) {
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
-                  {selectedSurah}. {surahData?.englishName}
+                  {selectedSurah}. {t(surahData?.englishName)}
                 </Text>
               </View>
 
@@ -834,7 +844,7 @@ export default function QuranScreen({ navigation }) {
                   ellipsizeMode="tail"
                 >
                   {selectedSurah > 1 && surahs[selectedSurah - 2]
-                    ? surahs[selectedSurah - 2].englishName + " »"
+                    ? t(surahs[selectedSurah - 2].englishName) + " »"
                     : ""}
                 </Text>
               </TouchableOpacity>
@@ -848,7 +858,7 @@ export default function QuranScreen({ navigation }) {
               <TouchableOpacity onPress={goBack} style={styles.headerBtn}>
                 <Ionicons name="chevron-back" size={28} color={THEME.text} />
                 <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
-                  Juz {juzData.juz}
+                  {t("juz")} {juzData.juz}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -885,7 +895,7 @@ export default function QuranScreen({ navigation }) {
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
-                  Juz {juzData.juz}
+                  {t("juz")} {juzData.juz}
                 </Text>
               </View>
               <TouchableOpacity
@@ -908,7 +918,7 @@ export default function QuranScreen({ navigation }) {
           <View style={styles.headerRow}>
             <TouchableOpacity
               onPress={() => {
-                if (typeof Keyboard !== "undefined") Keyboard.dismiss();
+                Keyboard.dismiss();
                 navigation.openDrawer();
               }}
               style={{
@@ -925,7 +935,7 @@ export default function QuranScreen({ navigation }) {
               />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
-              Read Qur'an
+              {t('read_quran')}
             </Text>
           </View>
         )}
@@ -958,6 +968,7 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
 
   floatingHeader: {
+    zIndex: 10,
     position: "absolute",
     top: 0,
     width: "100%",
@@ -996,7 +1007,7 @@ const styles = StyleSheet.create({
   listTitle: { color: THEME.text, fontSize: 17, fontWeight: "600" },
   listSubtitle: {
     color: THEME.textMuted,
-    fontSize: 6,
+    fontSize: 12,
     marginTop: 4,
     textTransform: "uppercase",
     letterSpacing: 0.5,

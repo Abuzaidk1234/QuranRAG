@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Platform,
   Image,
+  Keyboard,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,7 +22,10 @@ const THEME = {
   gold: "#cba153",
 };
 
+import { useTranslation } from "react-i18next";
+
 export default function BookmarksScreen({ navigation }) {
+  const { t, i18n } = useTranslation();
   const [bookmarks, setBookmarks] = useState([]);
   const [viewMode, setViewMode] = useState("quran");
 
@@ -69,7 +73,7 @@ export default function BookmarksScreen({ navigation }) {
               viewMode === "quran" && styles.toggleBtnTextActive,
             ]}
           >
-            Quran
+            {t('quran')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -85,7 +89,7 @@ export default function BookmarksScreen({ navigation }) {
               viewMode === "hadith" && styles.toggleBtnTextActive,
             ]}
           >
-            Hadiths
+            {t('hadiths')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -95,20 +99,26 @@ export default function BookmarksScreen({ navigation }) {
         contentContainerStyle={{ paddingBottom: 50, paddingHorizontal: 20 }}
       >
         {bookmarks.filter((b) => b.id.startsWith(viewMode)).length === 0 ? (
-          <Text style={styles.emptyText}>No {viewMode} bookmarks yet.</Text>
+          <Text style={styles.emptyText}>
+            {t("no_bookmarks")}
+          </Text>
         ) : (
           bookmarks
             .filter((b) => b.id.startsWith(viewMode))
             .map((bookmark) => (
               <View key={bookmark.id} style={styles.bookmarkCard}>
                 <View style={styles.bookmarkHeader}>
-                  <Text style={styles.bookmarkTitle}>{bookmark.title}</Text>
+                  <Text style={[styles.bookmarkTitle, {textAlign: "left"}]}>{bookmark.title.replace(/^[^\(\-]+/, match => t(match.trim()) + " ").replace("Ayah", t("ayah"))}</Text>
                   <TouchableOpacity onPress={() => removeBookmark(bookmark.id)}>
                     <Ionicons name="bookmark" size={24} color={THEME.gold} />
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.arabicText}>{bookmark.arabic}</Text>
-                <Text style={styles.englishText}>{bookmark.english}</Text>
+                <Text style={styles.englishText}>
+                {i18n.language === "ur"
+                  ? (bookmark.urdu || bookmark.english)
+                  : bookmark.english}
+              </Text>
               </View>
             ))
         )}
@@ -125,7 +135,7 @@ export default function BookmarksScreen({ navigation }) {
       >
         <TouchableOpacity
           onPress={() => {
-            if (typeof Keyboard !== "undefined") Keyboard.dismiss();
+            Keyboard.dismiss();
             navigation.openDrawer();
           }}
           style={{
@@ -141,8 +151,8 @@ export default function BookmarksScreen({ navigation }) {
             resizeMode="contain"
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          Bookmarks
+        <Text style={[styles.headerTitle, {textAlign: "left"}]} numberOfLines={1}>
+          {t("bookmarks")}
         </Text>
       </LinearGradient>
     </View>
@@ -156,6 +166,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "ios" ? 50 : 20,
   },
   toggleContainer: {
+    marginTop: 80,
     flexDirection: "row",
     backgroundColor: THEME.bg,
     borderBottomWidth: 1,
