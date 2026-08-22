@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from langchain_chroma import Chroma
+from langchain_qdrant import QdrantVectorStore
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
@@ -13,6 +13,7 @@ from langchain_classic.chains.combine_documents import create_stuff_documents_ch
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.globals import set_llm_cache
 from langchain_community.cache import InMemoryCache
+from qdrant_client import QdrantClient
 
 # Enable in-memory caching to save API calls for repeated questions
 set_llm_cache(InMemoryCache())
@@ -30,8 +31,6 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-CHROMA_DB_DIR = "chroma_db"
-
 class ChatRequest(BaseModel):
     query: str
     provider: str = "groq"  # "groq" or "gemini"
@@ -48,9 +47,11 @@ class ChatResponse(BaseModel):
     answer: str
     sources: list[Source]
 
-# Global variables to hold model and db
-db = None
-retriever = None
+# Global variables to hold models
+embeddings = None
+qdrant_store = None
+llm_groq = None
+llm_gemini = None
 
 system_prompt = (
     "You are an Islamic scholar. Answer the user's question accurately using the provided scripture context. "

@@ -7,7 +7,7 @@ if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
 # Datasets to download
-QURAN_ENG_URL = "https://api.alquran.cloud/v1/quran/en.asad"
+QURAN_ENG_URL = "https://api.alquran.cloud/v1/quran/en.sahih"
 QURAN_ARA_URL = "https://api.alquran.cloud/v1/quran/quran-uthmani"
 
 # AhmedBaset unified Hadith Datasets (Arabic + English + Chapters + Grades)

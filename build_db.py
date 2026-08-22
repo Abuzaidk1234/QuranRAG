@@ -1,4 +1,4 @@
-﻿import sqlite3
+import sqlite3
 import json
 import os
 
@@ -52,10 +52,25 @@ for s_ara, s_eng, s_urd in zip(ara, eng, urd):
     
     # Insert Ayahs
     for a_ara, a_eng, a_urd in zip(s_ara["ayahs"], s_eng["ayahs"], s_urd["ayahs"]):
+        ara_text = a_ara["text"]
+        # If not Surah 1 (Al-Fatiha) and is the first Ayah, strip prefixed Bismillah because decorative header displays it
+        if s_ara["number"] != 1 and a_ara["numberInSurah"] == 1:
+            prefixes = [
+                'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ',
+                'بِّسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ ',
+                'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ',
+                'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
+                'بِّسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
+            ]
+            for p in prefixes:
+                if ara_text.startswith(p):
+                    ara_text = ara_text[len(p):].strip()
+                    break
+
         c.execute("""
             INSERT INTO ayahs (id, surah_id, numberInSurah, juz, arabic, english, urdu)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (a_ara["number"], s_ara["number"], a_ara["numberInSurah"], a_ara["juz"], a_ara["text"], a_eng["text"], a_urd["text"]))
+        """, (a_ara["number"], s_ara["number"], a_ara["numberInSurah"], a_ara["juz"], ara_text, a_eng["text"], a_urd["text"]))
 
 conn.commit()
 print("Quran data loaded.")
@@ -144,3 +159,8 @@ c.execute("CREATE INDEX idx_hadiths_book_chapter ON hadiths(book_id, chapter_id)
 
 conn.close()
 print("Database generation complete!")
+
+import shutil
+assets_db_path = "mobile_app/assets/rahnavard.db"
+shutil.copy(db_path, assets_db_path)
+print(f"Copied {db_path} to {assets_db_path} successfully!")

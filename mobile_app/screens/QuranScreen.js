@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
@@ -11,14 +11,15 @@ import {
   Image,
   ImageBackground,
   Platform,
-  Modal,
   Alert,
   BackHandler,
   Keyboard,
+  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons, Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { getDatabase, queryDatabase } from "../utils/database";
 
 const THEME = {
@@ -28,6 +29,16 @@ const THEME = {
   textMuted: "#8baeb4",
   accent: "#3ca59d",
   gold: "#cba153",
+};
+
+// ============================================================================
+// ⚙️ EDITABLE SCROLL CONFIGURATION PARAMETERS (Adjust wait time & speed here)
+// ============================================================================
+export const SCROLL_CONFIG = {
+  START_DELAY_MS: 1000,    // 👈 Time to wait (in ms) before auto-scrolling starts (e.g. 1000, 1500, 2000)
+  STEP_INTERVAL_MS: 300,   // 👈 Interval (in ms) between scroll steps (Higher = slower scroll, Lower = faster scroll)
+  STEP_SIZE: 5,            // 👈 Number of Ayahs to advance per step (e.g. 3, 5, 8)
+  VIEW_OFFSET: 130,        // 👈 Top padding offset so verse is placed below the floating header
 };
 
 // Helper for Arabic numbers
@@ -75,13 +86,518 @@ const Octagram = ({ number, size = 32 }) => {
   );
 };
 
-import { useTranslation } from "react-i18next";
+// Top-level memoized Surah Page View (Prevents unmounting and scroll-to-top on state changes)
+const SurahPageView = React.memo(
+  ({
+    surahNumber,
+    isCurrent,
+    targetAyah,
+    currentSurahData,
+    fetchSurahDataAsync,
+    scrollViewRef,
+    lastRead,
+    bookmarks,
+    toggleBookmark,
+    handlePinAyah,
+    t,
+    i18n,
+    SCREEN_WIDTH,
+  }) => {
+    const [localData, setLocalData] = useState(null);
+
+    useEffect(() => {
+      let isMounted = true;
+      if (isCurrent && currentSurahData && currentSurahData.number === surahNumber) {
+        setLocalData(currentSurahData);
+        return;
+      }
+      
+      const load = async () => {
+         const fetched = await fetchSurahDataAsync(surahNumber);
+         if (isMounted && fetched) {
+            setLocalData(fetched);
+         }
+      };
+      
+      load();
+      return () => { isMounted = false; };
+    }, [surahNumber, isCurrent, currentSurahData, fetchSurahDataAsync]);
+
+    const data = localData;
+
+    const flatListRef = useRef(null);
+    const hasAutoScrolled = useRef(false);
+
+    // Keep parent's ref updated if current
+    useEffect(() => {
+      if (isCurrent && scrollViewRef) {
+        scrollViewRef.current = flatListRef.current;
+      }
+    }, [isCurrent, scrollViewRef]);
+
+    // Progressive Smooth Scroll to Pinned Ayah (One-time action per open)
+    useEffect(() => {
+      if (!isCurrent || !targetAyah || targetAyah <= 1 || !data?.ayahs?.length) return;
+      if (hasAutoScrolled.current) return;
+      hasAutoScrolled.current = true;
+
+      const targetIdx = targetAyah - 1;
+      let isMounted = true;
+      let currentIdx = 0;
+      let timerId = null;
+
+      const step = () => {
+        if (!isMounted || !flatListRef.current) return;
+        currentIdx = Math.min(targetIdx, currentIdx + SCROLL_CONFIG.STEP_SIZE);
+
+        try {
+          flatListRef.current.scrollToIndex({
+            index: currentIdx,
+            animated: true,
+            viewPosition: 0,
+            viewOffset: SCROLL_CONFIG.VIEW_OFFSET,
+          });
+        } catch (e) {
+          const offset = currentIdx * 160;
+          flatListRef.current?.scrollToOffset({
+            offset,
+            animated: true,
+          });
+        }
+
+        if (currentIdx < targetIdx && isMounted) {
+          timerId = setTimeout(step, SCROLL_CONFIG.STEP_INTERVAL_MS);
+        }
+      };
+
+      timerId = setTimeout(step, SCROLL_CONFIG.START_DELAY_MS);
+
+      return () => {
+        isMounted = false;
+        if (timerId) clearTimeout(timerId);
+      };
+    }, [isCurrent, targetAyah, data]);
+
+    if (!data) return null;
+
+    return (
+      <FlatList
+        ref={flatListRef}
+        data={data.ayahs}
+        extraData={lastRead}
+        keyExtractor={(item) => String(item.number)}
+        initialNumToRender={10}
+        maxToRenderPerBatch={15}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === "android"}
+        style={{ width: SCREEN_WIDTH, height: "100%" }}
+        contentContainerStyle={{ paddingTop: 120, paddingBottom: 50 }}
+        onScrollToIndexFailed={(info) => {
+          const offset = info.index * (info.averageItemLength || 160);
+          flatListRef.current?.scrollToOffset({ offset, animated: true });
+        }}
+        ListHeaderComponent={
+          <>
+            <View
+              style={[
+                styles.bannerContainer,
+                {
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: -30,
+                  marginBottom: -10,
+                },
+              ]}
+            >
+              <ImageBackground
+                source={require("../assets/Surant_name.png")}
+                style={{
+                  width: 380,
+                  height: 120,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+                imageStyle={{ tintColor: THEME.gold }}
+                resizeMode="contain"
+              >
+                <Text
+                  style={[
+                    styles.bannerArabic,
+                    {
+                      textAlign: "center",
+                      width: "80%",
+                      paddingHorizontal: 25,
+                      fontSize: 20,
+                    },
+                  ]}
+                  adjustsFontSizeToFit
+                  numberOfLines={1}
+                >
+                  {data.name}
+                </Text>
+              </ImageBackground>
+            </View>
+
+            {data.number !== 1 && data.number !== 9 && (
+              <View
+                style={[
+                  styles.bismillahContainer,
+                  {
+                    width: "100%",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: -10,
+                    marginTop: -20,
+                    direction: "ltr",
+                    paddingHorizontal: 25,
+                  },
+                ]}
+              >
+                <Image
+                  source={require("../assets/Bismilla.png")}
+                  style={{
+                    width: 65,
+                    height: 65,
+                    transform: [{ rotate: "-90deg" }],
+                    marginRight: -6,
+                  }}
+                  resizeMode="contain"
+                />
+                <Text
+                  style={[
+                    styles.bismillah,
+                    {
+                      fontSize: 28,
+                      textAlign: "center",
+                      marginTop: -5,
+                      flexShrink: 1,
+                    },
+                  ]}
+                  adjustsFontSizeToFit
+                  numberOfLines={1}
+                >
+                  بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+                </Text>
+                <Image
+                  source={require("../assets/Bismilla.png")}
+                  style={{
+                    width: 65,
+                    height: 65,
+                    transform: [{ rotate: "90deg" }],
+                    marginLeft: -6,
+                  }}
+                  resizeMode="contain"
+                />
+              </View>
+            )}
+          </>
+        }
+        renderItem={({ item: ayah }) => {
+          const isPinned =
+            lastRead?.type === "ayah" &&
+            lastRead?.id === data.number &&
+            lastRead?.targetAyah === ayah.numberInSurah;
+          const isBookmarked = bookmarks.some((b) => b.id === `quran_${ayah.number}`);
+
+          return (
+            <View style={styles.ayahRow}>
+              <View style={styles.ayahLeft}>
+                <Octagram number={ayah.numberInSurah} size={36} />
+                <TouchableOpacity
+                  style={{ marginTop: 15 }}
+                  onPress={() => toggleBookmark(ayah, data.englishName)}
+                >
+                  <Ionicons
+                    name={isBookmarked ? "bookmark" : "bookmark-outline"}
+                    size={22}
+                    color={THEME.gold}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ marginTop: 15 }}
+                  onPress={() => handlePinAyah(ayah, data.englishName)}
+                >
+                  <Ionicons
+                    name={isPinned ? "location" : "location-outline"}
+                    size={26}
+                    color={THEME.gold}
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.ayahRight}>
+                <Text style={styles.ayahArabic}>
+                  {ayah.arabic}{" "}
+                  <Text style={{ color: THEME.textMuted }}>
+                    {"\uFD3F"}
+                    {toArabicNumber(ayah.numberInSurah)}
+                    {"\uFD3E"}
+                  </Text>
+                </Text>
+                <Text style={styles.ayahEnglish}>
+                  {i18n.language === "ur"
+                    ? ayah.urdu && ayah.urdu.trim() !== ""
+                      ? ayah.urdu
+                      : ayah.english
+                    : ayah.english}
+                </Text>
+              </View>
+            </View>
+          );
+        }}
+        ListFooterComponent={
+          <View
+            style={{
+              paddingVertical: 30,
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "row",
+            }}
+          >
+            <Image
+              source={require("../assets/Bismilla.png")}
+              style={{
+                width: 65,
+                height: 65,
+                transform: [{ rotate: "-90deg" }],
+                marginRight: 0,
+              }}
+              resizeMode="contain"
+            />
+            <Text
+              style={{
+                marginHorizontal: 10,
+                fontSize: 14,
+                color: THEME.textMuted,
+                letterSpacing: 4,
+                fontWeight: "bold",
+              }}
+            >
+              END
+            </Text>
+            <Image
+              source={require("../assets/Bismilla.png")}
+              style={{
+                width: 65,
+                height: 65,
+                transform: [{ rotate: "90deg" }],
+                marginLeft: 0,
+              }}
+              resizeMode="contain"
+            />
+          </View>
+        }
+      />
+    );
+  }
+);
+
+// Top-level memoized Juz Page View (Prevents unmounting and scroll-to-top on state changes)
+const JuzPageView = React.memo(
+  ({
+    juzNumber,
+    isCurrent,
+    currentJuzData,
+    fetchJuzDataAsync,
+    lastRead,
+    bookmarks,
+    toggleBookmark,
+    handlePinAyah,
+    t,
+    i18n,
+    SCREEN_WIDTH,
+  }) => {
+    const [localData, setLocalData] = useState(null);
+
+    useEffect(() => {
+      let isMounted = true;
+      if (isCurrent && currentJuzData && currentJuzData.juz === juzNumber) {
+        setLocalData(currentJuzData);
+        return;
+      }
+      
+      const load = async () => {
+         const fetched = await fetchJuzDataAsync(juzNumber);
+         if (isMounted && fetched) {
+            setLocalData(fetched);
+         }
+      };
+      
+      load();
+      return () => { isMounted = false; };
+    }, [juzNumber, isCurrent, currentJuzData, fetchJuzDataAsync]);
+
+    const data = localData;
+
+    const flatListRef = useRef(null);
+
+    if (!data) return null;
+
+    return (
+      <FlatList
+        ref={flatListRef}
+        data={data.ayahs}
+        extraData={lastRead}
+        keyExtractor={(item) => String(item.number)}
+        initialNumToRender={10}
+        maxToRenderPerBatch={15}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === "android"}
+        style={{ width: SCREEN_WIDTH, height: "100%" }}
+        contentContainerStyle={{ paddingTop: 120, paddingBottom: 50 }}
+        renderItem={({ item: ayah }) => {
+          const isPinned =
+            lastRead?.type === "ayah" &&
+            lastRead?.id === ayah.surahNumber &&
+            lastRead?.targetAyah === ayah.numberInSurah;
+          const isBookmarked = bookmarks.some((b) => b.id === `quran_${ayah.number}`);
+
+          return (
+            <View>
+              {ayah.numberInSurah === 1 && (
+                <>
+                  <View
+                    style={[
+                      styles.bannerContainer,
+                      {
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginTop: 10,
+                        marginBottom: -10,
+                      },
+                    ]}
+                  >
+                    <ImageBackground
+                      source={require("../assets/Surant_name.png")}
+                      style={{
+                        width: 300,
+                        height: 110,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                      imageStyle={{ tintColor: THEME.gold }}
+                      resizeMode="contain"
+                    >
+                      <Text
+                        style={[styles.bannerArabic, { fontSize: 30 }]}
+                        adjustsFontSizeToFit
+                        numberOfLines={1}
+                      >
+                        {ayah.surahNameArabic}
+                      </Text>
+                    </ImageBackground>
+                  </View>
+                  {ayah.surahNumber !== 9 && (
+                    <View
+                      style={[
+                        styles.bismillahContainer,
+                        {
+                          width: "100%",
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginBottom: 20,
+                          marginTop: -10,
+                          direction: "ltr",
+                          paddingHorizontal: 25,
+                        },
+                      ]}
+                    >
+                      <Image
+                        source={require("../assets/Bismilla.png")}
+                        style={{
+                          width: 65,
+                          height: 65,
+                          transform: [{ rotate: "-90deg" }],
+                          marginRight: -15,
+                        }}
+                        resizeMode="contain"
+                      />
+                      <Text
+                        style={[
+                          styles.bismillah,
+                          {
+                            fontSize: 28,
+                            textAlign: "center",
+                            marginTop: -5,
+                            flexShrink: 1,
+                          },
+                        ]}
+                        adjustsFontSizeToFit
+                        numberOfLines={1}
+                      >
+                        بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+                      </Text>
+                      <Image
+                        source={require("../assets/Bismilla.png")}
+                        style={{
+                          width: 65,
+                          height: 65,
+                          transform: [{ rotate: "90deg" }],
+                          marginLeft: -15,
+                        }}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  )}
+                </>
+              )}
+              <View style={styles.ayahRow}>
+                <View style={styles.ayahLeft}>
+                  <Octagram number={ayah.numberInSurah} size={36} />
+                  <TouchableOpacity
+                    style={{ marginTop: 15 }}
+                    onPress={() => toggleBookmark(ayah, ayah.surahNameEnglish)}
+                  >
+                    <Ionicons
+                      name={isBookmarked ? "bookmark" : "bookmark-outline"}
+                      size={22}
+                      color={THEME.gold}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ marginTop: 15 }}
+                    onPress={() => handlePinAyah(ayah, ayah.surahNameEnglish)}
+                  >
+                    <Ionicons
+                      name={isPinned ? "location" : "location-outline"}
+                      size={26}
+                      color={THEME.gold}
+                    />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.ayahRight}>
+                  <Text style={styles.ayahArabic}>
+                    {ayah.arabic}{" "}
+                    <Text style={{ color: THEME.textMuted }}>
+                      {"\uFD3F"}
+                      {toArabicNumber(ayah.numberInSurah)}
+                      {"\uFD3E"}
+                    </Text>
+                  </Text>
+                  <Text style={styles.ayahEnglish}>
+                    {i18n.language === "ur"
+                      ? ayah.urdu && ayah.urdu.trim() !== ""
+                        ? ayah.urdu
+                        : ayah.english
+                      : ayah.english}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          );
+        }}
+      />
+    );
+  }
+);
 
 export default function QuranScreen({ navigation }) {
   const { t, i18n } = useTranslation();
   const [surahs, setSurahs] = useState([]);
   const [selectedSurah, setSelectedSurah] = useState(null);
   const [surahData, setSurahData] = useState(null);
+  const [targetScrollAyah, setTargetScrollAyah] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Bookmarks State
@@ -98,27 +614,154 @@ export default function QuranScreen({ navigation }) {
         setSelectedSurah(null);
         setSurahData(null);
         setJuzData(null);
+        setTargetScrollAyah(null);
         return true;
       }
       return false;
     };
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
-      backAction,
+      backAction
     );
     return () => backHandler.remove();
   }, [selectedSurah, juzData]);
 
   const [lastRead, setLastRead] = useState(null);
   const scrollViewRef = useRef(null);
-  const ayahPositions = useRef({});
-  const pendingScrollAyah = useRef(null);
+  const targetSurahIdRef = useRef(null);
   const dbRef = useRef(null);
+
+  const surahTabBarRef = useRef(null);
+  const juzTabBarRef = useRef(null);
+
+  const surahPagerRef = useRef(null);
+  const juzPagerRef = useRef(null);
+  const dirScrollRef = useRef(null);
+
+  const TAB_WIDTH = Dimensions.get("window").width / 3;
+  const SCREEN_WIDTH = Dimensions.get("window").width;
+
+  const surahTabs = useMemo(() => {
+    if (!surahs.length) return [];
+    return [
+      { id: 115, isDummy: true },
+      ...[...surahs].reverse(),
+      { id: 0, isDummy: true },
+    ];
+  }, [surahs]);
+
+  const juzTabs = useMemo(() => {
+    const list = [{ juz: 31, isDummy: true }];
+    for (let i = 30; i >= 1; i--) {
+      list.push({ juz: i, isDummy: false });
+    }
+    list.push({ juz: 0, isDummy: true });
+    return list;
+  }, []);
+
+  useEffect(() => {
+    if (selectedSurah && surahTabBarRef.current) {
+      const targetX = (114 - selectedSurah) * TAB_WIDTH;
+      surahTabBarRef.current.scrollTo({
+        x: Math.max(0, targetX),
+        animated: true,
+      });
+    }
+  }, [selectedSurah]);
+
+  useEffect(() => {
+    if (juzData?.juz && juzTabBarRef.current) {
+      const targetX = (30 - juzData.juz) * TAB_WIDTH;
+      juzTabBarRef.current.scrollTo({
+        x: Math.max(0, targetX),
+        animated: true,
+      });
+    }
+  }, [juzData?.juz]);
+
+  const fetchSurahDataAsync = useCallback(
+    async (surahNumber) => {
+      if (!surahNumber || !dbRef.current) return null;
+      try {
+        const meta = await queryDatabase(
+          dbRef.current,
+          "SELECT * FROM surahs WHERE id = ?",
+          [surahNumber]
+        );
+        if (!meta || !meta.length) return null;
+        const ayahsList = await queryDatabase(
+          dbRef.current,
+          "SELECT * FROM ayahs WHERE surah_id = ? ORDER BY id ASC",
+          [surahNumber]
+        );
+        return {
+          number: meta[0].id,
+          name: meta[0].name,
+          englishName: meta[0].englishName,
+          revelationType: meta[0].revelationType,
+          numberOfAyahs: meta[0].numberOfAyahs,
+          ayahs: ayahsList.map((a) => ({
+            number: a.id,
+            numberInSurah: a.numberInSurah,
+            juz: a.juz,
+            text: a.arabic,
+            arabic: a.arabic,
+            english: a.english,
+            urdu: a.urdu,
+          })),
+        };
+      } catch (e) {
+        console.error("fetchSurahDataAsync error", e);
+      }
+      return null;
+    },
+    []
+  );
+
+  const fetchJuzDataAsync = useCallback(
+    async (juzNumber) => {
+      if (!juzNumber || !dbRef.current) return null;
+      try {
+        const rows = await queryDatabase(
+          dbRef.current,
+          "SELECT * FROM ayahs WHERE juz = ? ORDER BY id ASC",
+          [juzNumber]
+        );
+        if (!rows || !rows.length) return null;
+        return {
+          juz: juzNumber,
+          ayahs: rows.map((a) => {
+            const surah = surahs.find((s) => s.id === a.surah_id);
+            return {
+              number: a.id,
+              numberInSurah: a.numberInSurah,
+              juz: a.juz,
+              text: a.arabic,
+              arabic: a.arabic,
+              english: a.english,
+              urdu: a.urdu,
+              surah: surah,
+              surahNameEnglish: surah?.englishName || "",
+              surahNameArabic: surah?.name || "",
+              surahNumber: a.surah_id,
+            };
+          }),
+        };
+      } catch (e) {
+        console.error("fetchJuzDataAsync error", e);
+      }
+      return null;
+    },
+    [surahs]
+  );
 
   const loadLastRead = async () => {
     try {
       const stored = await AsyncStorage.getItem("lastRead");
-      if (stored) setLastRead(JSON.parse(stored));
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setLastRead(parsed);
+      }
     } catch (e) {}
   };
 
@@ -148,85 +791,62 @@ export default function QuranScreen({ navigation }) {
     }
   };
 
-  const handlePinAyah = (ayah, surahName) => {
-    const sNum = ayah.surahNumber || selectedSurah;
-    const title = `${surahName} (Ayah ${ayah.numberInSurah})`;
-    saveLastRead("ayah", sNum, title, ayah.numberInSurah);
-  };
+  const handlePinAyah = useCallback(
+    (ayah, surahName) => {
+      const sNum = ayah.surahNumber || selectedSurah;
+      const title = `${surahName} (Ayah ${ayah.numberInSurah})`;
+      saveLastRead("ayah", sNum, title, ayah.numberInSurah);
+    },
+    [selectedSurah]
+  );
 
-  const toggleBookmark = async (ayah, surahName) => {
-    try {
-      // create a unique ID for the ayah
-      const id = `quran_${ayah.number}`;
-      const isBookmarked = bookmarks.some((b) => b.id === id);
-      let updatedBookmarks;
+  const toggleBookmark = useCallback(
+    async (ayah, surahName) => {
+      try {
+        const id = `quran_${ayah.number}`;
+        const isBookmarked = bookmarks.some((b) => b.id === id);
+        let updatedBookmarks;
 
-      if (isBookmarked) {
-        updatedBookmarks = bookmarks.filter((b) => b.id !== id);
-      } else {
-        const newBookmark = {
-          id: id,
-          title: `${surahName} - Ayah ${ayah.numberInSurah}`,
-          arabic: ayah.arabic,
-          english: ayah.english,
-        urdu: ayah.urdu,
-        };
-        updatedBookmarks = [...bookmarks, newBookmark];
+        if (isBookmarked) {
+          updatedBookmarks = bookmarks.filter((b) => b.id !== id);
+        } else {
+          const newBookmark = {
+            id: id,
+            title: `${surahName} - Ayah ${ayah.numberInSurah}`,
+            arabic: ayah.arabic,
+            english: ayah.english,
+            urdu: ayah.urdu,
+          };
+          updatedBookmarks = [...bookmarks, newBookmark];
+        }
+
+        await AsyncStorage.setItem("bookmarks", JSON.stringify(updatedBookmarks));
+        setBookmarks(updatedBookmarks);
+      } catch (e) {
+        console.error(e);
       }
+    },
+    [bookmarks]
+  );
 
-      await AsyncStorage.setItem("bookmarks", JSON.stringify(updatedBookmarks));
-      setBookmarks(updatedBookmarks);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const loadJuz = (juzNumber) => {
+  const loadJuz = async (juzNumber) => {
     if (!juzNumber || !dbRef.current) return;
     try {
-      let ayahs;
-      if (dbRef.current.getAllSync) {
-        ayahs = dbRef.current.getAllSync(
-          "SELECT * FROM ayahs WHERE juz = ? ORDER BY id ASC",
-          [juzNumber]
-        );
-      }
-
-      const mapAyahs = (rows) =>
-        rows.map((a) => {
-          const surah = surahs.find((s) => s.id === a.surah_id);
-          return {
-            number: a.id,
-            numberInSurah: a.numberInSurah,
-            juz: a.juz,
-            text: a.arabic,
-            arabic: a.arabic,
-            english: a.english,
-            urdu: a.urdu,
-            surah: surah,
-            surahNameEnglish: surah?.englishName || "",
-            surahNameArabic: surah?.name || "",
-            surahNumber: a.surah_id,
-          };
-        });
-
-      if (ayahs) {
-        setSelectedSurah(null);
-        setSurahData(null);
-        setJuzData({ juz: juzNumber, ayahs: mapAyahs(ayahs) });
+      setSelectedSurah(null);
+      setSurahData(null);
+      setTargetScrollAyah(null);
+      const data = await fetchJuzDataAsync(juzNumber);
+      if (data) {
+        setJuzData(data);
         setLoading(false);
-      } else {
-        setLoading(true);
-        setSelectedSurah(null);
-        setSurahData(null);
-        queryDatabase(
-          dbRef.current,
-          "SELECT * FROM ayahs WHERE juz = ? ORDER BY id ASC",
-          [juzNumber]
-        ).then((rows) => {
-          setJuzData({ juz: juzNumber, ayahs: mapAyahs(rows) });
-          setLoading(false);
-        });
+      }
+      if (juzPagerRef.current) {
+        try {
+          juzPagerRef.current.scrollToIndex({
+            index: Math.max(0, 30 - juzNumber),
+            animated: false,
+          });
+        } catch (e) {}
       }
     } catch (e) {
       console.error("Failed to load Juz", e);
@@ -234,82 +854,25 @@ export default function QuranScreen({ navigation }) {
     }
   };
 
-  const loadSurah = (surahNumber, targetAyah = null) => {
+  const loadSurah = async (surahNumber, targetAyah = null) => {
     if (!surahNumber || !dbRef.current) return;
-    if (targetAyah) pendingScrollAyah.current = targetAyah;
-
     try {
-      let surahMeta, ayahsList;
-      if (dbRef.current.getAllSync) {
-        const meta = dbRef.current.getAllSync(
-          "SELECT * FROM surahs WHERE id = ?",
-          [surahNumber]
-        );
-        surahMeta = meta[0];
-        ayahsList = dbRef.current.getAllSync(
-          "SELECT * FROM ayahs WHERE surah_id = ? ORDER BY id ASC",
-          [surahNumber]
-        );
-      }
-
-      const applySurah = (meta, ayahs) => {
-        setSurahData({
-          number: meta.id,
-          name: meta.name,
-          englishName: meta.englishName,
-          revelationType: meta.revelationType,
-          numberOfAyahs: meta.numberOfAyahs,
-          ayahs: ayahs.map((a) => ({
-            number: a.id,
-            numberInSurah: a.numberInSurah,
-            juz: a.juz,
-            text: a.arabic,
-            arabic: a.arabic,
-            english: a.english,
-            urdu: a.urdu,
-          })),
-        });
-        setJuzData(null);
-        setSelectedSurah(surahNumber);
+      setJuzData(null);
+      setSelectedSurah(surahNumber);
+      setTargetScrollAyah(targetAyah);
+      targetSurahIdRef.current = targetAyah ? surahNumber : null;
+      const data = await fetchSurahDataAsync(surahNumber);
+      if (data) {
+        setSurahData(data);
         setLoading(false);
-      };
-
-      if (surahMeta && ayahsList) {
-        applySurah(surahMeta, ayahsList);
-      } else {
-        setLoading(true);
-        setJuzData(null);
-        queryDatabase(dbRef.current, "SELECT * FROM surahs WHERE id = ?", [
-          surahNumber,
-        ]).then((meta) => {
-          queryDatabase(
-            dbRef.current,
-            "SELECT * FROM ayahs WHERE surah_id = ? ORDER BY id ASC",
-            [surahNumber]
-          ).then((ayahs) => {
-            applySurah(meta[0], ayahs);
-          });
-        });
       }
-
-      if (pendingScrollAyah.current) {
-        const target = pendingScrollAyah.current;
-        setTimeout(() => {
-          if (scrollViewRef.current) {
-            const targetIdx = target - 1;
-            try {
-              scrollViewRef.current.scrollToIndex({
-                index: Math.max(0, targetIdx),
-                animated: true,
-                viewPosition: 0,
-                viewOffset: 140,
-              });
-            } catch (err) {
-              console.warn("ScrollToIndex error:", err);
-            }
-          }
-          pendingScrollAyah.current = null;
-        }, 350);
+      if (surahPagerRef.current) {
+        try {
+          surahPagerRef.current.scrollToIndex({
+            index: Math.max(0, 114 - surahNumber),
+            animated: false,
+          });
+        } catch (e) {}
       }
     } catch (e) {
       console.error("Failed to load surah details", e);
@@ -323,15 +886,21 @@ export default function QuranScreen({ navigation }) {
       try {
         const db = await getDatabase();
         dbRef.current = db;
-        
+
         // Generate Juzs (1-30)
-        const juzList = Array.from({length: 30}, (_, i) => ({id: i + 1, name: `Juz ${i + 1}`}));
+        const juzList = Array.from({ length: 30 }, (_, i) => ({
+          id: i + 1,
+          name: `Juz ${i + 1}`,
+        }));
         setJuzs(juzList);
 
         // Fetch Surahs
-        const surahsData = await queryDatabase(db, "SELECT * FROM surahs ORDER BY id ASC");
-        setSurahs(surahsData.map(s => ({...s, number: s.id})));
-        
+        const surahsData = await queryDatabase(
+          db,
+          "SELECT * FROM surahs ORDER BY id ASC"
+        );
+        setSurahs(surahsData.map((s) => ({ ...s, number: s.id })));
+
         setLoading(false);
       } catch (e) {
         console.error("DB Init Error:", e);
@@ -341,11 +910,157 @@ export default function QuranScreen({ navigation }) {
     initDb();
   }, []);
 
+  const surahsRTL = useMemo(
+    () => Array.from({ length: 114 }, (_, i) => 114 - i),
+    []
+  );
+  const juzsRTL = useMemo(
+    () => Array.from({ length: 30 }, (_, i) => 30 - i),
+    []
+  );
+
+  const renderLastReadBanner = () => {
+    if (!lastRead) return null;
+    return (
+      <TouchableOpacity
+        style={{
+          paddingVertical: 10,
+          backgroundColor: THEME.surface,
+          marginHorizontal: 20,
+          marginBottom: 15,
+          padding: 15,
+          borderRadius: 10,
+          flexDirection: "row",
+          alignItems: "center",
+          borderWidth: 1,
+          borderColor: THEME.gold,
+        }}
+        onPress={() => {
+          if (lastRead.type === "surah" || lastRead.type === "ayah")
+            loadSurah(lastRead.id, lastRead.targetAyah);
+          else loadJuz(lastRead.id);
+        }}
+      >
+        <Ionicons name="book" size={24} color={THEME.gold} />
+        <View style={{ marginLeft: 15 }}>
+          <Text
+            style={{
+              color: THEME.textMuted,
+              fontSize: 12,
+              textTransform: "uppercase",
+              fontWeight: "bold",
+              textAlign: "left",
+            }}
+          >
+            {t("continue_reading")}
+          </Text>
+          <Text
+            style={{
+              color: THEME.text,
+              fontSize: 14,
+              marginTop: 2,
+              textAlign: "left",
+            }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {lastRead.title.replace(/^[^\(]+/, (match) => t(match.trim()) + " ")}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }} />
+        <Ionicons name="chevron-forward" size={20} color={THEME.gold} />
+      </TouchableOpacity>
+    );
+  };
+
   const goBack = () => {
     setSelectedSurah(null);
     setSurahData(null);
     setJuzData(null);
+    setTargetScrollAyah(null);
   };
+
+  const memoizedSurahTabs = useMemo(() => {
+    return surahTabs.map((s, idx) => {
+      if (s.isDummy) {
+        return (
+          <View
+            key={`dummy_${s.id}_${idx}`}
+            style={{ width: TAB_WIDTH, height: 44 }}
+          />
+        );
+      }
+      return (
+        <TouchableOpacity
+          key={s.id}
+          style={{
+            width: TAB_WIDTH,
+            paddingTop: 8,
+            paddingBottom: 10,
+            paddingHorizontal: 4,
+            alignItems: "center",
+            justifyContent: "center",
+            height: 44,
+            position: "relative",
+          }}
+          onPress={() => loadSurah(s.id)}
+        >
+          <Text
+            style={{
+              color: "#ffffff",
+              fontSize: 14,
+              textAlign: "center",
+            }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {`${s.id}. ${t(s.englishName)}`}
+          </Text>
+        </TouchableOpacity>
+      );
+    });
+  }, [surahTabs, loadSurah, t, TAB_WIDTH]);
+
+  const memoizedJuzTabs = useMemo(() => {
+    return juzTabs.map((item, idx) => {
+      if (item.isDummy) {
+        return (
+          <View
+            key={`dummy_juz_${item.juz}_${idx}`}
+            style={{ width: TAB_WIDTH, height: 44 }}
+          />
+        );
+      }
+      return (
+        <TouchableOpacity
+          key={item.juz}
+          style={{
+            width: TAB_WIDTH,
+            paddingTop: 8,
+            paddingBottom: 10,
+            paddingHorizontal: 4,
+            alignItems: "center",
+            justifyContent: "center",
+            height: 44,
+            position: "relative",
+          }}
+          onPress={() => loadJuz(item.juz)}
+        >
+          <Text
+            style={{
+              color: "#ffffff",
+              fontSize: 15,
+              textAlign: "center",
+            }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {`${t("juz")} ${item.juz}`}
+          </Text>
+        </TouchableOpacity>
+      );
+    });
+  }, [juzTabs, loadJuz, t, TAB_WIDTH]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -358,396 +1073,143 @@ export default function QuranScreen({ navigation }) {
           />
         ) : juzData ? (
           <FlatList
-            key={`juz_${juzData?.juz}`}
-            data={juzData.ayahs}
-            keyExtractor={(item) => String(item.number)}
-            initialNumToRender={10}
-            maxToRenderPerBatch={15}
-            windowSize={7}
+            ref={juzPagerRef}
+            data={juzsRTL}
+            keyExtractor={(item) => `juz_p_${item}`}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            initialScrollIndex={Math.max(0, 30 - juzData.juz)}
+            getItemLayout={(data, index) => ({
+              length: SCREEN_WIDTH,
+              offset: SCREEN_WIDTH * index,
+              index,
+            })}
+            windowSize={5}
+            maxToRenderPerBatch={3}
+            initialNumToRender={3}
             removeClippedSubviews={Platform.OS === "android"}
-            style={StyleSheet.absoluteFillObject}
-            contentContainerStyle={{ paddingTop: 120, paddingBottom: 50 }}
-            renderItem={({ item: ayah }) => (
-              <View>
-                {ayah.numberInSurah === 1 && (
-                  <>
-                    <View
-                      style={[
-                        styles.bannerContainer,
-                        {
-                          alignItems: "center",
-                          justifyContent: "center",
-                          marginTop: 10,
-                          marginBottom: -10,
-                        },
-                      ]}
-                    >
-                      <ImageBackground
-                        source={require("../assets/Surant_name.png")}
-                        style={{
-                          width: 300,
-                          height: 110,
-                          justifyContent: "center",
-                          alignItems: "center",
-                        }}
-                        resizeMode="contain"
-                      >
-                        <Text
-                          style={[styles.bannerArabic, { fontSize: 30 }]}
-                          adjustsFontSizeToFit
-                          numberOfLines={1}
-                        >
-                          {ayah.surahNameArabic}
-                        </Text>
-                      </ImageBackground>
-                    </View>
-                    {ayah.surahNumber !== 9 && (
-                      <View
-                        style={[
-                          styles.bismillahContainer,
-                          {
-                            width: "100%",
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            marginBottom: 20,
-                            marginTop: -10,
-                            direction: "ltr",
-                            paddingHorizontal: 25,
-                          },
-                        ]}
-                      >
-                        <Image
-                          source={require("../assets/Bismilla.png")}
-                          style={{
-                            width: 65,
-                            height: 65,
-                            transform: [{ rotate: "-90deg" }],
-                            marginRight: -15,
-                          }}
-                          resizeMode="contain"
-                        />
-                        <Text
-                          style={[
-                            styles.bismillah,
-                            {
-                              fontSize: 28,
-                              textAlign: "center",
-                              marginTop: -5,
-                              flexShrink: 1,
-                            },
-                          ]}
-                          adjustsFontSizeToFit
-                          numberOfLines={1}
-                        >
-                          بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
-                        </Text>
-                        <Image
-                          source={require("../assets/Bismilla.png")}
-                          style={{
-                            width: 65,
-                            height: 65,
-                            transform: [{ rotate: "90deg" }],
-                            marginLeft: -15,
-                          }}
-                          resizeMode="contain"
-                        />
-                      </View>
-                    )}
-                  </>
-                )}
-                <View style={styles.ayahRow}>
-                  <View style={styles.ayahLeft}>
-                    <Octagram number={ayah.numberInSurah} size={36} />
-                    <TouchableOpacity
-                      style={{ marginTop: 15 }}
-                      onPress={() =>
-                        toggleBookmark(ayah, ayah.surahNameEnglish)
-                      }
-                    >
-                      <Ionicons
-                        name={
-                          bookmarks.some((b) => b.id === `quran_${ayah.number}`)
-                            ? "bookmark"
-                            : "bookmark-outline"
-                        }
-                        size={22}
-                        color={THEME.gold}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={{ marginTop: 15 }}
-                      onPress={() => handlePinAyah(ayah, ayah.surahNameEnglish)}
-                    >
-                      <Ionicons
-                        name={
-                          lastRead?.type === "ayah" &&
-                          lastRead?.title.includes(
-                            `(Ayah ${ayah.numberInSurah})`,
-                          )
-                            ? "location"
-                            : "location-outline"
-                        }
-                        size={26}
-                        color={THEME.gold}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.ayahRight}>
-                    <Text style={styles.ayahArabic}>
-                      {ayah.arabic}{" "}
-                      <Text style={{ color: THEME.textMuted }}>
-                        {"\uFD3F"}
-                        {toArabicNumber(ayah.numberInSurah)}
-                        {"\uFD3E"}
-                      </Text>
-                    </Text>
-                    <Text style={styles.ayahEnglish}>
-                      {i18n.language === "ur"
-                        ? ayah.urdu && ayah.urdu.trim() !== ""
-                          ? ayah.urdu
-                          : ayah.english
-                        : ayah.english}
-                    </Text>
-                  </View>
-                </View>
+            scrollEventThrottle={16}
+            onScroll={(e) => {
+              const offsetX = e.nativeEvent.contentOffset.x;
+              const targetTabX = (offsetX / SCREEN_WIDTH) * TAB_WIDTH;
+              juzTabBarRef.current?.scrollTo({
+                x: Math.max(0, targetTabX),
+                animated: false,
+              });
+            }}
+            onScrollToIndexFailed={(info) => {
+              setTimeout(() => {
+                juzPagerRef.current?.scrollToIndex({
+                  index: info.index,
+                  animated: false,
+                });
+              }, 100);
+            }}
+            onMomentumScrollEnd={async (e) => {
+              const pageIndex = Math.round(
+                e.nativeEvent.contentOffset.x / SCREEN_WIDTH
+              );
+              const newJuz = 30 - pageIndex;
+              if (newJuz >= 1 && newJuz <= 30 && newJuz !== juzData?.juz) {
+                const data = await fetchJuzDataAsync(newJuz);
+                if (data) setJuzData(data);
+              }
+            }}
+            renderItem={({ item }) => (
+              <View style={{ width: SCREEN_WIDTH, height: "100%" }}>
+                <JuzPageView
+                  juzNumber={item}
+                  isCurrent={item === juzData?.juz}
+                  currentJuzData={juzData}
+                  fetchJuzDataAsync={fetchJuzDataAsync}
+                  lastRead={lastRead}
+                  bookmarks={bookmarks}
+                  toggleBookmark={toggleBookmark}
+                  handlePinAyah={handlePinAyah}
+                  t={t}
+                  i18n={i18n}
+                  SCREEN_WIDTH={SCREEN_WIDTH}
+                />
               </View>
             )}
+            style={StyleSheet.absoluteFillObject}
           />
         ) : selectedSurah && surahData ? (
           <FlatList
-            key={`surah_${selectedSurah}`}
-            ref={scrollViewRef}
-            data={surahData.ayahs}
-            keyExtractor={(item) => String(item.number)}
-            initialNumToRender={10}
-            maxToRenderPerBatch={15}
-            windowSize={7}
+            ref={surahPagerRef}
+            data={surahsRTL}
+            keyExtractor={(item) => `surah_p_${item}`}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            initialScrollIndex={Math.max(0, 114 - selectedSurah)}
+            getItemLayout={(data, index) => ({
+              length: SCREEN_WIDTH,
+              offset: SCREEN_WIDTH * index,
+              index,
+            })}
+            windowSize={5}
+            maxToRenderPerBatch={3}
+            initialNumToRender={3}
             removeClippedSubviews={Platform.OS === "android"}
-            style={StyleSheet.absoluteFillObject}
-            contentContainerStyle={{ paddingTop: 120, paddingBottom: 50 }}
-            onScrollToIndexFailed={(info) => {
-              const wait = new Promise((resolve) => setTimeout(resolve, 150));
-              wait.then(() => {
-                if (scrollViewRef.current) {
-                  scrollViewRef.current.scrollToIndex({
-                    index: info.index,
-                    animated: true,
-                    viewPosition: 0,
-                    viewOffset: 140,
-                  });
-                }
+            scrollEventThrottle={16}
+            onScroll={(e) => {
+              const offsetX = e.nativeEvent.contentOffset.x;
+              const targetTabX = (offsetX / SCREEN_WIDTH) * TAB_WIDTH;
+              surahTabBarRef.current?.scrollTo({
+                x: Math.max(0, targetTabX),
+                animated: false,
               });
             }}
-            ListHeaderComponent={
-              <>
-                {/* Ornate Banner */}
-                <View
-                  style={[
-                    styles.bannerContainer,
-                    {
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginTop: -20,
-                      marginBottom: -10,
-                    },
-                  ]}
-                >
-                  <ImageBackground
-                    source={require("../assets/Surant_name.png")}
-                    style={{
-                      width: 380,
-                      height: 130,
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                    resizeMode="contain"
-                  >
-                    <Text
-                      style={[
-                        styles.bannerArabic,
-                        {
-                          textAlign: "center",
-                          width: "80%",
-                          paddingHorizontal: 25,
-                        },
-                      ]}
-                      adjustsFontSizeToFit
-                      numberOfLines={1}
-                    >
-                      {surahData.name}
-                    </Text>
-                  </ImageBackground>
-                </View>
-
-                {surahData.number !== 1 &&
-                  surahData.number !== 9 &&
-                  selectedSurah !== 1 &&
-                  selectedSurah !== 9 && (
-                    <View
-                      style={[
-                        styles.bismillahContainer,
-                        {
-                          width: "100%",
-                          flexDirection: "row",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          marginBottom: -10,
-                          marginTop: -30,
-                          direction: "ltr",
-                          paddingHorizontal: 25,
-                        },
-                      ]}
-                    >
-                      <Image
-                        source={require("../assets/Bismilla.png")}
-                        style={{
-                          width: 65,
-                          height: 65,
-                          transform: [{ rotate: "-90deg" }],
-                          marginRight: -6,
-                        }}
-                        resizeMode="contain"
-                      />
-                      <Text
-                        style={[
-                          styles.bismillah,
-                          {
-                            fontSize: 25,
-                            textAlign: "center",
-                            marginTop: -5,
-                            flexShrink: 1,
-                          },
-                        ]}
-                        adjustsFontSizeToFit
-                        numberOfLines={1}
-                      >
-                        بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
-                      </Text>
-                      <Image
-                        source={require("../assets/Bismilla.png")}
-                        style={{
-                          width: 65,
-                          height: 65,
-                          transform: [{ rotate: "90deg" }],
-                          marginLeft: -6,
-                        }}
-                        resizeMode="contain"
-                      />
-                    </View>
-                  )}
-              </>
-            }
-            renderItem={({ item: ayah }) => (
-              <View
-                style={styles.ayahRow}
-                onLayout={(event) => {
-                  ayahPositions.current[ayah.numberInSurah] =
-                    event.nativeEvent.layout.y;
-                }}
-              >
-                <View style={styles.ayahLeft}>
-                  <Octagram number={ayah.numberInSurah} size={36} />
-                  <TouchableOpacity
-                    style={{ marginTop: 15 }}
-                    onPress={() => toggleBookmark(ayah, surahData.englishName)}
-                  >
-                    <Ionicons
-                      name={
-                        bookmarks.some((b) => b.id === `quran_${ayah.number}`)
-                          ? "bookmark"
-                          : "bookmark-outline"
-                      }
-                      size={22}
-                      color={THEME.gold}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{ marginTop: 15 }}
-                    onPress={() => handlePinAyah(ayah, surahData.englishName)}
-                  >
-                    <Ionicons
-                      name={
-                        lastRead?.type === "ayah" &&
-                        lastRead?.title ===
-                          `${surahData.englishName} (Ayah ${ayah.numberInSurah})`
-                          ? "location"
-                          : "location-outline"
-                      }
-                      size={26}
-                      color={THEME.gold}
-                    />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.ayahRight}>
-                  {/* Arabic text with the ornate end symbol containing the arabic number */}
-                  <Text style={styles.ayahArabic}>
-                    {ayah.arabic}{" "}
-                    <Text style={{ color: THEME.textMuted }}>
-                      {"\uFD3F"}
-                      {toArabicNumber(ayah.numberInSurah)}
-                      {"\uFD3E"}
-                    </Text>
-                  </Text>
-                  <Text style={styles.ayahEnglish}>
-                    {i18n.language === "ur"
-                      ? ayah.urdu && ayah.urdu.trim() !== ""
-                        ? ayah.urdu
-                        : ayah.english
-                      : ayah.english}
-                  </Text>
-                </View>
+            onScrollToIndexFailed={(info) => {
+              setTimeout(() => {
+                surahPagerRef.current?.scrollToIndex({
+                  index: info.index,
+                  animated: false,
+                });
+              }, 100);
+            }}
+            onMomentumScrollEnd={async (e) => {
+              const pageIndex = Math.round(
+                e.nativeEvent.contentOffset.x / SCREEN_WIDTH
+              );
+              const newSurah = 114 - pageIndex;
+              if (
+                newSurah >= 1 &&
+                newSurah <= 114 &&
+                newSurah !== selectedSurah
+              ) {
+                targetSurahIdRef.current = null;
+                setSelectedSurah(newSurah);
+                const data = await fetchSurahDataAsync(newSurah);
+                if (data) setSurahData(data);
+              }
+            }}
+            renderItem={({ item }) => (
+              <View style={{ width: SCREEN_WIDTH, height: "100%" }}>
+                <SurahPageView
+                  surahNumber={item}
+                  isCurrent={item === selectedSurah}
+                  targetAyah={
+                    item === selectedSurah && targetSurahIdRef.current === item
+                      ? targetScrollAyah
+                      : null
+                  }
+                  currentSurahData={surahData}
+                  fetchSurahDataAsync={fetchSurahDataAsync}
+                  scrollViewRef={scrollViewRef}
+                  lastRead={lastRead}
+                  bookmarks={bookmarks}
+                  toggleBookmark={toggleBookmark}
+                  handlePinAyah={handlePinAyah}
+                  t={t}
+                  i18n={i18n}
+                  SCREEN_WIDTH={SCREEN_WIDTH}
+                />
               </View>
             )}
-            ListFooterComponent={
-              <View
-                style={[
-                  styles.bismillahContainer,
-                  {
-                    width: "100%",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginTop: 0,
-                    marginBottom: -30,
-                    direction: "ltr",
-                    paddingHorizontal: 25,
-                  },
-                ]}
-              >
-                <Image
-                  source={require("../assets/Bismilla.png")}
-                  style={{
-                    width: 65,
-                    height: 65,
-                    transform: [{ rotate: "-90deg" }],
-                    marginRight: 0,
-                  }}
-                  resizeMode="contain"
-                />
-                <Text
-                  style={{
-                    fontSize: 18,
-                    textAlign: "center",
-                    color: THEME.textMuted,
-                    letterSpacing: 4,
-                    fontWeight: "bold",
-                  }}
-                >
-                  END
-                </Text>
-                <Image
-                  source={require("../assets/Bismilla.png")}
-                  style={{
-                    width: 65,
-                    height: 65,
-                    transform: [{ rotate: "90deg" }],
-                    marginLeft: 0,
-                  }}
-                  resizeMode="contain"
-                />
-              </View>
-            }
+            style={StyleSheet.absoluteFillObject}
           />
         ) : (
           <View style={{ flex: 1, backgroundColor: THEME.bg }}>
@@ -765,7 +1227,10 @@ export default function QuranScreen({ navigation }) {
                   styles.toggleBtn,
                   viewMode === "surah" && styles.toggleBtnActive,
                 ]}
-                onPress={() => setViewMode("surah")}
+                onPress={() => {
+                  setViewMode("surah");
+                  dirScrollRef.current?.scrollTo({ x: 0, animated: true });
+                }}
               >
                 <Text
                   style={[
@@ -773,7 +1238,7 @@ export default function QuranScreen({ navigation }) {
                     viewMode === "surah" && styles.toggleBtnTextActive,
                   ]}
                 >
-                  {t('surahs')}
+                  {t("surahs")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -781,7 +1246,13 @@ export default function QuranScreen({ navigation }) {
                   styles.toggleBtn,
                   viewMode === "juz" && styles.toggleBtnActive,
                 ]}
-                onPress={() => setViewMode("juz")}
+                onPress={() => {
+                  setViewMode("juz");
+                  dirScrollRef.current?.scrollTo({
+                    x: SCREEN_WIDTH,
+                    animated: true,
+                  });
+                }}
               >
                 <Text
                   style={[
@@ -789,77 +1260,47 @@ export default function QuranScreen({ navigation }) {
                     viewMode === "juz" && styles.toggleBtnTextActive,
                   ]}
                 >
-                  {t('juz')}
+                  {t("juz")}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {lastRead && (
-              <TouchableOpacity
-                style={{
-                  paddingVertical: 10,
-                  backgroundColor: THEME.surface,
-                  marginHorizontal: 20,
-                  marginBottom: 15,
-                  padding: 15,
-                  borderRadius: 10,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  borderWidth: 1,
-                  borderColor: THEME.gold,
-                }}
-                onPress={() => {
-                  if (lastRead.type === "surah" || lastRead.type === "ayah")
-                    loadSurah(lastRead.id, lastRead.targetAyah);
-                  else loadJuz(lastRead.id);
-                }}
-              >
-                <Ionicons name="book" size={24} color={THEME.gold} />
-                <View style={{ marginLeft: 15 }}>
-                  <Text
-                    style={{
-                      color: THEME.textMuted,
-                      fontSize: 12,
-                      textTransform: "uppercase",
-                      fontWeight: "bold",
-                      textAlign: "left",
-                    }}
-                  >
-                    {t('continue_reading')}
-                  </Text>
-                  <Text
-                    style={{ color: THEME.text, fontSize: 14, marginTop: 2, textAlign: "left" }}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                  >
-                    {lastRead.title.replace(/^[^\(]+/, match => t(match.trim()) + " ")}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }} />
-                <Ionicons name="chevron-forward" size={20} color={THEME.gold} />
-              </TouchableOpacity>
-            )}
-            <FlatList
-              data={viewMode === "surah" ? surahs : juzs}
-              keyExtractor={(item) =>
-                viewMode === "surah"
-                  ? item.number.toString()
-                  : item.id.toString()
-              }
-              contentContainerStyle={{ paddingBottom: 50 }}
+            <ScrollView
+              ref={dirScrollRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => {
+                const page = Math.round(
+                  e.nativeEvent.contentOffset.x / SCREEN_WIDTH
+                );
+                setViewMode(page === 0 ? "surah" : "juz");
+              }}
               style={{ flex: 1 }}
-              renderItem={({ item }) => {
-                if (viewMode === "surah") {
-                  return (
+            >
+              {/* Page 0: Surahs Directory List */}
+              <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
+                {renderLastReadBanner()}
+                <FlatList
+                  data={surahs}
+                  keyExtractor={(item) => item.number.toString()}
+                  contentContainerStyle={{ paddingBottom: 50 }}
+                  style={{ flex: 1 }}
+                  renderItem={({ item }) => (
                     <TouchableOpacity
                       style={styles.listItem}
                       onPress={() => loadSurah(item.number)}
                     >
                       <Octagram number={item.number} size={38} />
                       <View style={styles.listTextContainer}>
-                        <Text style={[styles.listTitle, {textAlign: "left"}]}>{t(item.englishName)}</Text>
-                        <Text style={[styles.listSubtitle, {textAlign: "left"}]}>
-                          {item.revelationType === 'MECCAN' ? t('meccan') : t('medinan')} | {item.numberOfAyahs} {t('verses')}
+                        <Text style={[styles.listTitle, { textAlign: "left" }]}>
+                          {t(item.englishName)}
+                        </Text>
+                        <Text style={[styles.listSubtitle, { textAlign: "left" }]}>
+                          {item.revelationType === "MECCAN"
+                            ? t("meccan")
+                            : t("medinan")}{" "}
+                          | {item.numberOfAyahs} {t("verses")}
                         </Text>
                       </View>
                       <Text
@@ -870,17 +1311,31 @@ export default function QuranScreen({ navigation }) {
                         {item.name}
                       </Text>
                     </TouchableOpacity>
-                  );
-                } else {
-                  return (
+                  )}
+                />
+              </View>
+
+              {/* Page 1: Juz Directory List */}
+              <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
+                {renderLastReadBanner()}
+                <FlatList
+                  data={juzs}
+                  keyExtractor={(item) => item.id.toString()}
+                  contentContainerStyle={{ paddingBottom: 50 }}
+                  style={{ flex: 1 }}
+                  renderItem={({ item }) => (
                     <TouchableOpacity
                       style={styles.listItem}
                       onPress={() => loadJuz(item.id)}
                     >
                       <Octagram number={item.id} size={38} />
                       <View style={styles.listTextContainer}>
-                        <Text style={[styles.listTitle, {textAlign: "left"}]}>{viewMode === "surah" ? t(item.englishName) : `${t("juz")} ${item.id}`}</Text>
-                        <Text style={[styles.listSubtitle, {textAlign: "left"}]}>{t("part")} {item.id}</Text>
+                        <Text style={[styles.listTitle, { textAlign: "left" }]}>
+                          {`${t("juz")} ${item.id}`}
+                        </Text>
+                        <Text style={[styles.listSubtitle, { textAlign: "left" }]}>
+                          {t("part")} {item.id}
+                        </Text>
                       </View>
                       <Text
                         style={[styles.listArabic, { maxWidth: "40%" }]}
@@ -890,10 +1345,10 @@ export default function QuranScreen({ navigation }) {
                         الجزء {toArabicNumber(item.id)}
                       </Text>
                     </TouchableOpacity>
-                  );
-                }
-              }}
-            />
+                  )}
+                />
+              </View>
+            </ScrollView>
           </View>
         )}
       </View>
@@ -908,178 +1363,80 @@ export default function QuranScreen({ navigation }) {
         style={styles.floatingHeader}
       >
         {selectedSurah ? (
-          <View style={{ width: "100%" }}>
+          <View style={{ width: "100%", position: "relative" }}>
             <View
               style={[styles.headerRow, { justifyContent: "space-between" }]}
             >
               <TouchableOpacity onPress={goBack} style={styles.headerBtn}>
                 <Ionicons name="chevron-back" size={28} color={THEME.text} />
                 <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
-                  {(surahData?.englishName ? t(surahData.englishName) : "Loading...")}
+                  Surahs
                 </Text>
               </TouchableOpacity>
             </View>
 
             <View
-              style={[
-                styles.surahNavRow,
-                {
-                  justifyContent: "space-between",
-                  paddingHorizontal: 10,
-                  paddingBottom: 0,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  height: 44,
-                },
-              ]}
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: TAB_WIDTH,
+                width: TAB_WIDTH,
+                height: 44,
+                backgroundColor: THEME.gold,
+                zIndex: 0,
+              }}
+            />
+
+            <ScrollView
+              ref={surahTabBarRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                alignItems: "center",
+                height: 44,
+              }}
+              style={styles.surahNavRow}
             >
-              <TouchableOpacity
-                style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 6, paddingHorizontal: 2 }}
-                onPress={() => {
-                  if (selectedSurah < 114) loadSurah(selectedSurah + 1);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.surahNavText,
-                    { fontSize: 13, color: "rgba(255, 255, 255, 0.6)", textAlign: "center", fontWeight: "500" },
-                  ]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {selectedSurah < 114 && surahs[selectedSurah]
-                    ? `${selectedSurah + 1}. ${t(surahs[selectedSurah].englishName)}`
-                    : ""}
-                </Text>
-              </TouchableOpacity>
-
-              <View style={{ flex: 1.2, alignItems: "center", justifyContent: "center", height: "100%" }}>
-                <Text
-                  style={[
-                    styles.surahNavActiveText,
-                    { textAlign: "center", fontSize: 15, color: THEME.gold, fontWeight: "bold" },
-                  ]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {`${selectedSurah}. ${t(surahData?.englishName || "")}`}
-                </Text>
-                <View
-                  style={{
-                    position: "absolute",
-                    bottom: 0,
-                    left: 10,
-                    right: 10,
-                    height: 2,
-                    backgroundColor: THEME.gold,
-                    borderRadius: 1,
-                  }}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 6, paddingHorizontal: 2 }}
-                onPress={() => {
-                  if (selectedSurah > 1) loadSurah(selectedSurah - 1);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.surahNavText,
-                    { fontSize: 13, color: "rgba(255, 255, 255, 0.6)", textAlign: "center", fontWeight: "500" },
-                  ]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {selectedSurah > 1 && surahs[selectedSurah - 2]
-                    ? `${selectedSurah - 1}. ${t(surahs[selectedSurah - 2].englishName)}`
-                    : ""}
-                </Text>
-              </TouchableOpacity>
-            </View>
+              {memoizedSurahTabs}
+            </ScrollView>
           </View>
         ) : juzData ? (
-          <View style={{ width: "100%" }}>
+          <View style={{ width: "100%", position: "relative" }}>
             <View
               style={[styles.headerRow, { justifyContent: "space-between" }]}
             >
               <TouchableOpacity onPress={goBack} style={styles.headerBtn}>
                 <Ionicons name="chevron-back" size={28} color={THEME.text} />
                 <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
-                  {t("juz")} {juzData.juz}
+                  Juzs
                 </Text>
               </TouchableOpacity>
             </View>
+
             <View
-              style={[
-                styles.surahNavRow,
-                {
-                  justifyContent: "space-between",
-                  paddingHorizontal: 10,
-                  paddingBottom: 0,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  height: 44,
-                },
-              ]}
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: TAB_WIDTH,
+                width: TAB_WIDTH,
+                height: 44,
+                backgroundColor: THEME.gold,
+                zIndex: 0,
+              }}
+            />
+
+            <ScrollView
+              ref={juzTabBarRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                alignItems: "center",
+                height: 44,
+              }}
+              style={styles.surahNavRow}
             >
-              <TouchableOpacity
-                style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 6 }}
-                onPress={() => {
-                  if (juzData.juz < 30) loadJuz(juzData.juz + 1);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.surahNavText,
-                    { fontSize: 15, color: "rgba(255, 255, 255, 0.6)", textAlign: "center", fontWeight: "500" },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {juzData.juz < 30 ? `${t("juz")} ${juzData.juz + 1}` : ""}
-                </Text>
-              </TouchableOpacity>
-
-              <View style={{ flex: 1, alignItems: "center", justifyContent: "center", height: "100%" }}>
-                <Text
-                  style={[
-                    styles.surahNavActiveText,
-                    { textAlign: "center", fontSize: 16, color: THEME.gold, fontWeight: "bold" },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {`${t("juz")} ${juzData.juz}`}
-                </Text>
-                <View
-                  style={{
-                    position: "absolute",
-                    bottom: 0,
-                    left: 20,
-                    right: 20,
-                    height: 2,
-                    backgroundColor: THEME.gold,
-                    borderRadius: 1,
-                  }}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 6 }}
-                onPress={() => {
-                  if (juzData.juz > 1) loadJuz(juzData.juz - 1);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.surahNavText,
-                    { fontSize: 15, color: "rgba(255, 255, 255, 0.6)", textAlign: "center", fontWeight: "500" },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {juzData.juz > 1 ? `${t("juz")} ${juzData.juz - 1}` : ""}
-                </Text>
-              </TouchableOpacity>
-            </View>
+              {memoizedJuzTabs}
+            </ScrollView>
           </View>
         ) : (
           <View style={styles.headerRow}>
@@ -1102,7 +1459,7 @@ export default function QuranScreen({ navigation }) {
               />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
-              {t('read_quran')}
+              {t("read_quran")}
             </Text>
           </View>
         )}

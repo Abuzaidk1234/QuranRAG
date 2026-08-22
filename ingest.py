@@ -1,11 +1,15 @@
 import json
 import os
 from langchain_core.documents import Document
-from langchain_chroma import Chroma
+from langchain_qdrant import QdrantVectorStore
 from langchain_community.embeddings import HuggingFaceEmbeddings
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Distance, VectorParams
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DATA_DIR = "data"
-CHROMA_DB_DIR = "chroma_db"
 
 def load_quran():
     print("Loading Quran...")
@@ -75,6 +79,13 @@ def load_hadiths():
     return docs
 
 def main():
+    qdrant_url = os.getenv("QDRANT_URL")
+    qdrant_api_key = os.getenv("QDRANT_API_KEY")
+    
+    if not qdrant_url or not qdrant_api_key:
+        print("ERROR: QDRANT_URL or QDRANT_API_KEY not found in .env")
+        return
+
     quran_docs = load_quran()
     hadith_docs = load_hadiths()
     all_docs = quran_docs + hadith_docs
@@ -84,20 +95,35 @@ def main():
     
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     
-    print("Creating Chroma database and ingesting documents...")
-    # Batch ingestion to avoid memory overload
-    batch_size = 5000
-    db = None
+    print("Connecting to Qdrant Cloud...")
+    client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=60)
+    collection_name = "quran_hadith"
     
+    # Check if collection exists, if not, create it
+    collections = client.get_collections()
+    if collection_name not in [c.name for c in collections.collections]:
+        print(f"Creating collection '{collection_name}'...")
+        client.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+        )
+    
+    print("Ingesting documents into Qdrant Cloud (this will take a few minutes)...")
+    
+    # Use QdrantVectorStore to add documents
+    vector_store = QdrantVectorStore(
+        client=client,
+        collection_name=collection_name,
+        embedding=embeddings,
+    )
+    
+    batch_size = 500
     for i in range(0, len(all_docs), batch_size):
         batch = all_docs[i:i+batch_size]
-        print(f"Ingesting batch {i} to {i+len(batch)}...")
-        if db is None:
-            db = Chroma.from_documents(batch, embeddings, persist_directory=CHROMA_DB_DIR)
-        else:
-            db.add_documents(batch)
+        print(f"Uploading batch {i} to {i+len(batch)}...")
+        vector_store.add_documents(batch)
             
-    print("Ingestion complete. Database is ready.")
+    print("Ingestion complete. Qdrant Database is ready in the cloud!")
 
 if __name__ == "__main__":
     main()

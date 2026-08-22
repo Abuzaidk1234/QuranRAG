@@ -13,12 +13,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  ImageBackground,
   ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
   Keyboard,
   Platform,
   Modal,
+  Dimensions,
 } from "react-native";
 
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -48,6 +50,7 @@ const THEME = {
   active: "#275862",
   userBubble: "#1b5b69",
   aiBubble: "#08333e",
+  gold: "#cba153",
 };
 
 // --- Context ---
@@ -637,7 +640,7 @@ function HomeScreen({ navigation }) {
         ...newMessages,
         {
           role: "ai",
-          text: "Connection error. Make sure your FastAPI server is running on port 8000!",
+          text: "Unable to connect to the server. Please check your internet connection and try again.",
         },
       ]);
     } finally {
@@ -688,7 +691,33 @@ function HomeScreen({ navigation }) {
           <View
             style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
           >
-            <Text style={styles.greeting}>{t("greeting")}</Text>
+            <ImageBackground
+              source={require("./assets/Surant_name.png")}
+              style={{
+                width: 380,
+                height: 130,
+                justifyContent: "center",
+                alignItems: "center",
+                marginBottom: 20,
+              }}
+              imageStyle={{ tintColor: THEME.gold }}
+              resizeMode="contain"
+            >
+              <Text
+                style={[
+                  styles.greeting,
+                  {
+                    fontSize: i18n.language === "ur" ? 28 : 24,
+                    width: "80%",
+                    paddingHorizontal: 20,
+                  },
+                ]}
+                adjustsFontSizeToFit
+                numberOfLines={1}
+              >
+                {t("greeting")}
+              </Text>
+            </ImageBackground>
           </View>
 
           {/* Floating Bottom Footer (Keyboard avoiding) */}
@@ -968,13 +997,38 @@ export default function App() {
             screenOptions={{
               headerShown: false,
               drawerStyle: { backgroundColor: THEME.bg, width: 280 },
+              swipeEnabled: false,
             }}
           >
-            <Drawer.Screen name="Home" component={HomeScreen} />
-            <Drawer.Screen name="ReadQuran" component={QuranScreen} />
-            <Drawer.Screen name="ReadHadiths" component={HadithScreen} />
-            <Drawer.Screen name="Bookmarks" component={BookmarksScreen} />
-            <Drawer.Screen name="Settings" component={SettingsScreen} />
+            <Drawer.Screen
+              name="Home"
+              component={HomeScreen}
+              options={{
+                swipeEnabled: true,
+                swipeEdgeWidth: Dimensions.get("window").width,
+                swipeMinDistance: 20,
+              }}
+            />
+            <Drawer.Screen
+              name="ReadQuran"
+              component={QuranScreen}
+              options={{ swipeEnabled: false }}
+            />
+            <Drawer.Screen
+              name="ReadHadiths"
+              component={HadithScreen}
+              options={{ swipeEnabled: false }}
+            />
+            <Drawer.Screen
+              name="Bookmarks"
+              component={BookmarksScreen}
+              options={{ swipeEnabled: false }}
+            />
+            <Drawer.Screen
+              name="Settings"
+              component={SettingsScreen}
+              options={{ swipeEnabled: false }}
+            />
           </Drawer.Navigator>
         </NavigationContainer>
       </ChatProvider>
@@ -999,10 +1053,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
   },
   greeting: {
-    fontSize: 32,
     fontWeight: "bold",
     color: THEME.text,
-    marginBottom: 40,
     textAlign: "center",
   },
   searchContainer: {

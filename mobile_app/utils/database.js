@@ -1,10 +1,11 @@
 import * as SQLite from "expo-sqlite";
 import * as FileSystem from "expo-file-system/legacy";
 import { Asset } from "expo-asset";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
 let dbInstance = null;
+const DB_VERSION = "2.0_sahih";
 
 export const getDatabase = async () => {
   if (dbInstance) return dbInstance;
@@ -28,9 +29,15 @@ export const getDatabase = async () => {
   }
 
   const dbInfo = await FileSystem.getInfoAsync(dbPath);
+  const storedVersion = await AsyncStorage.getItem("db_version");
 
-  if (!dbInfo.exists || !dbInfo.size || dbInfo.size < expectedMinSize) {
-    console.log("Extracting pre-populated SQLite database to:", dbPath);
+  if (
+    !dbInfo.exists ||
+    !dbInfo.size ||
+    dbInfo.size < expectedMinSize ||
+    storedVersion !== DB_VERSION
+  ) {
+    console.log("Extracting pre-populated SQLite database (v" + DB_VERSION + ") to:", dbPath);
     if (dbInfo.exists) {
       await FileSystem.deleteAsync(dbPath, { idempotent: true });
     }
@@ -44,6 +51,7 @@ export const getDatabase = async () => {
       to: dbPath,
     });
 
+    await AsyncStorage.setItem("db_version", DB_VERSION);
     const verified = await FileSystem.getInfoAsync(dbPath);
     console.log("Database successfully extracted! Size:", verified.size, "bytes");
   }
