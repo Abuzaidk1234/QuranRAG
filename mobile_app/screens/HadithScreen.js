@@ -1,11 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   ActivityIndicator,
   Image,
   Platform,
@@ -18,7 +19,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import axios from "axios";
+import { getDatabase, queryDatabase } from "../utils/database";
 
 const THEME = {
   bg: "#0c4452",
@@ -46,6 +47,7 @@ export default function HadithScreen({ navigation }) {
   const [chapterSearchQuery, setChapterSearchQuery] = useState("");
   const [searchedHadith, setSearchedHadith] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
+  const dbRef = useRef(null);
 
   useEffect(() => {
     const backAction = () => {
@@ -115,66 +117,154 @@ export default function HadithScreen({ navigation }) {
   };
 
   useEffect(() => {
-    axios
-      .get("http://192.168.1.100:8000/hadiths/books")
-      .then((response) => {
-        setBooks(response.data.books);
+    const initDb = async () => {
+      try {
+        const db = await getDatabase();
+        dbRef.current = db;
+        const booksData = await queryDatabase(
+          db,
+          `SELECT b.id, b.name, b.collection, COUNT(h.id) as total_hadiths 
+           FROM hadith_books b 
+           LEFT JOIN hadiths h ON b.id = h.book_id 
+           GROUP BY b.id
+           ORDER BY CASE b.id
+             WHEN 'bukhari' THEN 1
+             WHEN 'muslim' THEN 2
+             WHEN 'abudawud' THEN 3
+             WHEN 'tirmidhi' THEN 4
+             WHEN 'nasai' THEN 5
+             ELSE 6
+           END ASC`
+        );
+        setBooks(booksData);
         setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Failed to load books", error);
+      } catch (e) {
+        console.error("DB Init Error:", e);
         setLoading(false);
-      });
+      }
+    };
+    initDb();
   }, []);
 
   const loadChapters = (book) => {
-    setLoading(true);
-    axios
-      .get(`http://192.168.1.100:8000/hadiths/${book.id}`)
-      .then((response) => {
-        setChapters(response.data.chapters);
+    if (!dbRef.current) return;
+    try {
+      const chapterSql = `
+        SELECT c.chapter_id, c.arabic, c.english, c.urdu,
+               MIN(h.idInBook) as min_id,
+               MAX(h.idInBook) as max_id,
+               COUNT(h.id) as count
+        FROM hadith_chapters c
+        LEFT JOIN hadiths h ON c.book_id = h.book_id AND c.chapter_id = h.chapter_id
+        WHERE c.book_id = ? AND c.chapter_id IS NOT NULL
+        GROUP BY c.chapter_id
+        HAVING count > 0
+        ORDER BY c.chapter_id ASC
+      `;
+
+      let chaptersData;
+      if (dbRef.current.getAllSync) {
+        chaptersData = dbRef.current.getAllSync(chapterSql, [book.id]);
+      }
+
+      const applyChapters = (data) => {
+        setChapters(
+          data.map((c) => ({
+            id: c.chapter_id,
+            arabic: c.arabic,
+            english: c.english,
+            urdu: c.urdu,
+            range: c.count > 0 ? `Hadiths ${c.min_id} - ${c.max_id}` : "No hadiths",
+            count: c.count,
+          }))
+        );
         setSelectedBook(book);
         setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Failed to load chapters", error);
-        setLoading(false);
-      });
+      };
+
+      if (chaptersData) {
+        applyChapters(chaptersData);
+      } else {
+        setLoading(true);
+        queryDatabase(dbRef.current, chapterSql, [book.id]).then(applyChapters);
+      }
+    } catch (e) {
+      console.error("Failed to load chapters", e);
+      setLoading(false);
+    }
   };
 
   const loadHadiths = (chapter) => {
-    setLoading(true);
-    axios
-      .get(`http://192.168.1.100:8000/hadiths/${selectedBook.id}/${chapter.id}`)
-      .then((response) => {
-        setHadiths(response.data.hadiths);
+    if (!dbRef.current) return;
+    try {
+      let hadithsData;
+      if (dbRef.current.getAllSync) {
+        hadithsData = dbRef.current.getAllSync(
+          "SELECT * FROM hadiths WHERE book_id = ? AND chapter_id = ? ORDER BY idInBook ASC",
+          [selectedBook.id, chapter.id]
+        );
+      }
+
+      const applyHadiths = (data) => {
+        setHadiths(
+          data.map((h) => ({
+            id: h.id,
+            idInBook: h.idInBook,
+            chapterId: h.chapter_id,
+            bookId: h.book_id,
+            arabic: h.arabic,
+            english: { narrator: h.english_narrator, text: h.english_text },
+            urdu: h.urdu,
+          }))
+        );
         setSelectedChapter(chapter);
         setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Failed to load hadiths", error);
-        setLoading(false);
-      });
+      };
+
+      if (hadithsData) {
+        applyHadiths(hadithsData);
+      } else {
+        setLoading(true);
+        queryDatabase(
+          dbRef.current,
+          "SELECT * FROM hadiths WHERE book_id = ? AND chapter_id = ? ORDER BY idInBook ASC",
+          [selectedBook.id, chapter.id]
+        ).then(applyHadiths);
+      }
+    } catch (e) {
+      console.error("Failed to load hadiths", e);
+      setLoading(false);
+    }
   };
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) return;
+  const handleSearch = async () => {
+    if (!searchQuery.trim() || !dbRef.current) return;
     setLoading(true);
-    axios
-      .get(
-        `http://192.168.1.100:8000/hadiths/${selectedBook.id}/search/${searchQuery.trim()}`,
-      )
-      .then((response) => {
-        setSearchedHadith(response.data.hadith);
+    try {
+        const num = parseInt(searchQuery.trim());
+        const result = await queryDatabase(dbRef.current, "SELECT * FROM hadiths WHERE book_id = ? AND idInBook = ?", [selectedBook.id, num]);
+        if (result && result.length > 0) {
+            const h = result[0];
+            setSearchedHadith({
+                id: h.id,
+                idInBook: h.idInBook,
+                chapterId: h.chapter_id,
+                bookId: h.book_id,
+                arabic: h.arabic,
+                english: { narrator: h.english_narrator, text: h.english_text },
+                urdu: h.urdu
+            });
+        } else {
+            Alert.alert(
+              "Not Found",
+              "Could not find a hadith with that number in this book."
+            );
+        }
         setLoading(false);
-      })
-      .catch((error) => {
+    } catch (e) {
+        console.error(e);
         setLoading(false);
-        Alert.alert(
-          "Not Found",
-          "Could not find a hadith with that number in this book.",
-        );
-      });
+    }
   };
 
   const goBack = () => {
@@ -244,135 +334,171 @@ export default function HadithScreen({ navigation }) {
           </ScrollView>
         ) : selectedChapter ? (
           // --- HADITH LIST VIEW (INSIDE CHAPTER) ---
-          <ScrollView
+          <FlatList
+            key={`hadiths_${selectedBook?.id}_${selectedChapter?.id}`}
+            data={hadiths.filter(
+              (h) =>
+                chapterSearchQuery === "" ||
+                String(h.idInBook) === chapterSearchQuery,
+            )}
+            keyExtractor={(item) => String(item.id || item.idInBook)}
+            initialNumToRender={8}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={Platform.OS === "android"}
             style={StyleSheet.absoluteFillObject}
             contentContainerStyle={{
               paddingTop: 110,
               paddingBottom: 50,
               paddingHorizontal: 25,
             }}
-          >
-            <View style={styles.searchContainer}>
-              <Ionicons
-                name="search"
-                size={20}
-                color="#8baeb4"
-                style={styles.searchIcon}
-              />
-              <TextInput
-                style={styles.searchInput}
-                placeholder={`${t("search")} ${t(selectedChapter.english)}...`}
-                placeholderTextColor="#8baeb4"
-                keyboardType="numeric"
-                value={chapterSearchQuery}
-                onChangeText={setChapterSearchQuery}
-                returnKeyType="search"
-              />{" "}
-              {chapterSearchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setChapterSearchQuery("")}>
-                  <Ionicons name="close-circle" size={20} color="#8baeb4" />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <Text
-              style={{
-                color: THEME.textMuted,
-                fontSize: 13,
-                textAlign: "right",
-                marginTop: -12,
-                marginBottom: 20,
-                marginRight: 10,
-                fontStyle: "bold",
-                color: "#8baeb4",
-              }}
-            >
-              {t("valid_range")} {hadiths.length > 0 ? hadiths[0].idInBook : 0} {t("to")}{" "}
-              {hadiths.length > 0 ? hadiths[hadiths.length - 1].idInBook : 0}
-            </Text>
-
-            {hadiths
-              .filter(
-                (h) =>
-                  chapterSearchQuery === "" ||
-                  String(h.idInBook) === chapterSearchQuery,
-              )
-              .map((hadith, idx) => (
-                <View key={idx} style={styles.hadithContainer}>
-                  <View style={styles.hadithHeader}>
-                    <Text style={styles.hadithNumberText}>
-                      {t("hadith_number", {number: hadith.idInBook})}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() =>
-                        toggleBookmark(
-                          hadith,
-                          selectedBook.name,
-                          selectedChapter.english,
-                        )
-                      }
-                    >
-                      <Ionicons
-                        name={
-                          bookmarks.some(
-                            (b) =>
-                              b.id ===
-                              `hadith_${selectedBook.id}_${hadith.idInBook}`,
-                          )
-                            ? "bookmark"
-                            : "bookmark-outline"
-                        }
-                        size={22}
-                        color={THEME.gold}
-                      />
+            ListHeaderComponent={
+              <>
+                <View style={styles.searchContainer}>
+                  <Ionicons
+                    name="search"
+                    size={20}
+                    color="#8baeb4"
+                    style={styles.searchIcon}
+                  />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder={t("search_by_number")}
+                    placeholderTextColor="#8baeb4"
+                    keyboardType="numeric"
+                    value={chapterSearchQuery}
+                    onChangeText={setChapterSearchQuery}
+                    returnKeyType="search"
+                  />
+                  {chapterSearchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setChapterSearchQuery("")}>
+                      <Ionicons name="close-circle" size={20} color="#8baeb4" />
                     </TouchableOpacity>
-                  </View>
-                  <Text style={styles.arabicText}>{hadith.arabic}</Text>
-                  <Text style={styles.englishText}>
-                    {i18n.language === "ur" ? (hadith.urdu || "اردو ترجمہ دستیاب نہیں ہے۔") : (hadith.english?.text || hadith.english || hadith.text)}
-                  </Text>
+                  )}
                 </View>
-              ))}
-          </ScrollView>
+
+                <Text
+                  style={{
+                    color: "#8baeb4",
+                    fontSize: 13,
+                    textAlign: "right",
+                    marginTop: -12,
+                    marginBottom: 20,
+                    marginRight: 10,
+                    fontWeight: "bold",
+                  }}
+                >
+                  {`${t("valid_range")} ${hadiths.length > 0 ? hadiths[0].idInBook : 0} ${t("to")} ${hadiths.length > 0 ? hadiths[hadiths.length - 1].idInBook : 0}`}
+                </Text>
+              </>
+            }
+            renderItem={({ item: hadith }) => (
+              <View style={styles.hadithContainer}>
+                <View style={styles.hadithHeader}>
+                  <Text style={styles.hadithNumberText}>
+                    {t("hadith_number", { number: hadith.idInBook })}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() =>
+                      toggleBookmark(
+                        hadith,
+                        selectedBook.name,
+                        selectedChapter.english,
+                      )
+                    }
+                  >
+                    <Ionicons
+                      name={
+                        bookmarks.some(
+                          (b) =>
+                            b.id ===
+                            `hadith_${selectedBook.id}_${hadith.idInBook}`,
+                        )
+                          ? "bookmark"
+                          : "bookmark-outline"
+                      }
+                      size={22}
+                      color={THEME.gold}
+                    />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.arabicText}>{hadith.arabic}</Text>
+                <Text style={styles.englishText}>
+                  {i18n.language === "ur"
+                    ? hadith.urdu || "اردو ترجمہ دستیاب نہیں ہے۔"
+                    : hadith.english?.text ||
+                      hadith.english ||
+                      hadith.text}
+                </Text>
+              </View>
+            )}
+          />
         ) : selectedBook ? (
           // --- CHAPTER LIST VIEW ---
-          <ScrollView
+          <FlatList
+            key={`chapters_${selectedBook?.id}`}
+            data={chapters}
+            keyExtractor={(item) => String(item.id)}
+            initialNumToRender={15}
+            maxToRenderPerBatch={20}
+            windowSize={5}
+            removeClippedSubviews={Platform.OS === "android"}
             style={StyleSheet.absoluteFillObject}
             contentContainerStyle={{
               paddingTop: 110,
               paddingBottom: 50,
               paddingHorizontal: 25,
             }}
-          >
-            {/* Search Bar for entire book */}
-            <View style={styles.searchContainer}>
-              <Ionicons
-                name="search"
-                size={20}
-                color="#8baeb4"
-                style={styles.searchIcon}
-              />
-              <TextInput
-                style={styles.searchInput}
-                placeholder={t("search_by_number")}
-                placeholderTextColor="#8baeb4"
-                keyboardType="numeric"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearch}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery("")}>
-                  <Ionicons name="close-circle" size={20} color="#8baeb4" />
-                </TouchableOpacity>
-              )}
-            </View>
+            ListHeaderComponent={
+              <>
+                {/* Search Bar for entire book */}
+                <View style={styles.searchContainer}>
+                  <Ionicons
+                    name="search"
+                    size={20}
+                    color="#8baeb4"
+                    style={styles.searchIcon}
+                  />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder={t("search_by_number")}
+                    placeholderTextColor="#8baeb4"
+                    keyboardType="numeric"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    onSubmitEditing={handleSearch}
+                    returnKeyType="search"
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery("")}>
+                      <Ionicons name="close-circle" size={20} color="#8baeb4" />
+                    </TouchableOpacity>
+                  )}
+                </View>
 
-            <Text style={[styles.pageTitle, {textAlign: "left"}]}>{t(selectedBook.id)}</Text>
-            {chapters.map((chapter) => (
+                {selectedBook?.total_hadiths ? (
+                  <Text
+                    style={{
+                      color: "#8baeb4",
+                      fontSize: 13,
+                      textAlign: "right",
+                      marginTop: -12,
+                      marginBottom: 20,
+                      marginRight: 10,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {`${t("valid_range")} 1 ${t("to")} ${selectedBook.total_hadiths}`}
+                  </Text>
+                ) : null}
+
+                <Text style={[styles.pageTitle, { textAlign: "left" }]}>
+                  {t(selectedBook.id)}
+                </Text>
+              </>
+            }
+            renderItem={({ item: chapter }) => (
               <TouchableOpacity
-                key={chapter.id}
                 style={styles.listItemStacked}
                 onPress={() => loadHadiths(chapter)}
               >
@@ -381,16 +507,22 @@ export default function HadithScreen({ navigation }) {
                     <Text style={styles.listBadgeText}>{chapter.id}</Text>
                   </View>
                   <View style={styles.listTextContainer}>
-                    <Text style={[styles.listTitle, {textAlign: "left"}]}>{t(chapter.english)}</Text>
+                    <Text style={[styles.listTitle, { textAlign: "left" }]}>
+                      {t(chapter.english)}
+                    </Text>
                     {chapter.range ? (
-                      <Text style={[styles.listSubtitle, {textAlign: "left"}]}>{chapter.range.includes("No hadiths") ? t("no_hadiths") : chapter.range.replace("Hadiths", t("hadiths"))}</Text>
+                      <Text style={[styles.listSubtitle, { textAlign: "left" }]}>
+                        {chapter.range.includes("No hadiths")
+                          ? t("no_hadiths")
+                          : chapter.range.replace("Hadiths", t("hadiths"))}
+                      </Text>
                     ) : null}
                   </View>
                 </View>
                 <Text style={styles.listArabicStacked}>{chapter.arabic}</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            )}
+          />
         ) : (
           // --- BOOK LIST VIEW ---
           <ScrollView
@@ -438,11 +570,24 @@ export default function HadithScreen({ navigation }) {
         {selectedBook ? (
           <TouchableOpacity onPress={goBack} style={styles.headerRow}>
             <Ionicons name="arrow-back" size={28} color={THEME.text} />
-            <Text style={[styles.headerTitle, {textAlign: "left"}]} numberOfLines={1}>
+            <Text
+              style={[
+                styles.headerTitle,
+                {
+                  textAlign: "left",
+                  fontSize: i18n.language === "ur" ? 17 : 16,
+                  lineHeight: 22,
+                },
+              ]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+            >
               {searchedHadith
-                ? t("hadith_number", {number: searchedHadith.idInBook})
+                ? t("hadith_number", { number: searchedHadith.idInBook })
                 : selectedChapter
-                  ? selectedChapter.english
+                  ? i18n.language === "ur"
+                    ? selectedChapter.arabic || t(selectedChapter.english)
+                    : selectedChapter.english
                   : t(selectedBook.id)}
             </Text>
           </TouchableOpacity>

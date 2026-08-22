@@ -602,7 +602,9 @@ function HomeScreen({ navigation }) {
     setIsLoading(true);
 
     try {
-      const response = await axios.post("http://192.168.1.100:8000/chat", {
+      // NOTE: Replace this with your actual Koyeb App URL
+      const API_URL = "https://rahnavard.koyeb.app/chat";
+      const response = await axios.post(API_URL, {
         query: userText,
         provider: "groq",
         filter: activeFilter,

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile_app",
-    "slug": "mobile_app",
+    "name": "Rahnavard",
+    "slug": "rahnavard",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,7 +17,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.anonymous.mobile_app"
+      "package": "com.rahnavard.app",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
