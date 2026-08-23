@@ -5,6 +5,7 @@ uvicorn[standard]
 langchain
 langchain-community
 fastembed
+langchain-google-genai
 langchain-groq
 requests
 pydantic
