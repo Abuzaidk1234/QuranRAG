@@ -98,7 +98,7 @@ def main():
     print(f"Total documents to ingest: {len(all_docs)}")
     print("Initializing Google Generative AI Embeddings...")
     
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=google_api_key)
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004", google_api_key=google_api_key)
     
     print("Connecting to Qdrant Cloud...")
     client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=60)
