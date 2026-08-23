@@ -799,7 +799,7 @@ function HomeScreen({ navigation }) {
             contentContainerStyle={{
               paddingTop: 80,
               paddingBottom: 110,
-              paddingHorizontal: 25,
+              paddingHorizontal: 15,
             }}
           >
             {messages.map((msg, idx) => {
@@ -1109,15 +1109,16 @@ const styles = StyleSheet.create({
     maxWidth: "80%",
     marginBottom: 20,
   },
-  bubbleText: { color: THEME.text, fontSize: 16, lineHeight: 24 },
+  bubbleText: { color: THEME.text, fontSize: 15, lineHeight: 22, fontWeight: "400" },
 
   aiContainer: {
     alignSelf: "flex-start",
-    maxWidth: "95%",
+    maxWidth: "100%",
     marginBottom: 25,
-    paddingHorizontal: 25,
+    paddingLeft: 0,
+    paddingRight: 5,
   },
-  aiText: { color: THEME.text, fontSize: 16, lineHeight: 26 },
+  aiText: { color: THEME.text, fontSize: 15, lineHeight: 24, fontWeight: "400" },
   aiActionRow: { flexDirection: "row", marginTop: 12 },
   actionIcon: { flexDirection: "row", alignItems: "center", marginRight: 20 },
   actionText: {
