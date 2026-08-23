@@ -605,8 +605,8 @@ function HomeScreen({ navigation }) {
     setIsLoading(true);
 
     try {
-      // NOTE: Replace this with your actual Koyeb App URL
-      const API_URL = "https://rahnavard.koyeb.app/chat";
+      // NOTE: Replace this with your actual Render App URL
+      const API_URL = "https://quranrag.onrender.com/chat";
       const response = await axios.post(API_URL, {
         query: userText,
         provider: "groq",
