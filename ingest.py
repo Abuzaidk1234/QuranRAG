@@ -2,7 +2,7 @@ import json
 import os
 from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
 from dotenv import load_dotenv
@@ -81,14 +81,9 @@ def load_hadiths():
 def main():
     qdrant_url = os.getenv("QDRANT_URL")
     qdrant_api_key = os.getenv("QDRANT_API_KEY")
-    google_api_key = os.getenv("GOOGLE_API_KEY")
     
     if not qdrant_url or not qdrant_api_key:
         print("ERROR: QDRANT_URL or QDRANT_API_KEY not found in .env")
-        return
-        
-    if not google_api_key:
-        print("ERROR: GOOGLE_API_KEY not found in .env")
         return
 
     quran_docs = load_quran()
@@ -96,24 +91,24 @@ def main():
     all_docs = quran_docs + hadith_docs
     
     print(f"Total documents to ingest: {len(all_docs)}")
-    print("Initializing Google Generative AI Embeddings...")
+    print("Initializing FastEmbed (ONNX) Embeddings...")
     
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-2", google_api_key=google_api_key)
+    embeddings = FastEmbedEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     
     print("Connecting to Qdrant Cloud...")
     client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=60)
     collection_name = "quran_hadith"
     
-    # Check if collection exists, if so, delete it because dimensions have changed to 3072
+    # Check if collection exists, if so, delete it because dimensions have changed back to 384
     collections = client.get_collections()
     if collection_name in [c.name for c in collections.collections]:
         print(f"Deleting old collection '{collection_name}' to update dimensions...")
         client.delete_collection(collection_name=collection_name)
         
-    print(f"Creating new collection '{collection_name}' (dim=3072)...")
+    print(f"Creating new collection '{collection_name}' (dim=384)...")
     client.create_collection(
         collection_name=collection_name,
-        vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
+        vectors_config=VectorParams(size=384, distance=Distance.COSINE),
     )
     
     print("Ingesting documents into Qdrant Cloud (this will take a few minutes)...")

@@ -93,12 +93,12 @@ contextualize_q_prompt = ChatPromptTemplate.from_messages([
 async def startup_event():
     global embeddings, qdrant_store, llm_groq, llm_gemini
     
-    print("Loading Google Generative AI Embeddings...")
-    google_api_key = os.getenv("GOOGLE_API_KEY")
-    if google_api_key:
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-2", google_api_key=google_api_key)
-    else:
-        print("WARNING: GOOGLE_API_KEY not found. Embeddings will fail.")
+    print("Loading FastEmbed Embeddings (ONNX)...")
+    try:
+        from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+        embeddings = FastEmbedEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    except Exception as e:
+        print(f"WARNING: FastEmbed failed to load: {e}")
     
     print("Connecting to Qdrant Cloud...")
     qdrant_url = os.getenv("QDRANT_URL")
