@@ -98,22 +98,22 @@ def main():
     print(f"Total documents to ingest: {len(all_docs)}")
     print("Initializing Google Generative AI Embeddings...")
     
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004", google_api_key=google_api_key)
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-2", google_api_key=google_api_key)
     
     print("Connecting to Qdrant Cloud...")
     client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=60)
     collection_name = "quran_hadith"
     
-    # Check if collection exists, if so, delete it because dimensions have changed to 768
+    # Check if collection exists, if so, delete it because dimensions have changed to 3072
     collections = client.get_collections()
     if collection_name in [c.name for c in collections.collections]:
         print(f"Deleting old collection '{collection_name}' to update dimensions...")
         client.delete_collection(collection_name=collection_name)
         
-    print(f"Creating new collection '{collection_name}' (dim=768)...")
+    print(f"Creating new collection '{collection_name}' (dim=3072)...")
     client.create_collection(
         collection_name=collection_name,
-        vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+        vectors_config=VectorParams(size=3072, distance=Distance.COSINE),
     )
     
     print("Ingesting documents into Qdrant Cloud (this will take a few minutes)...")

@@ -96,7 +96,7 @@ async def startup_event():
     print("Loading Google Generative AI Embeddings...")
     google_api_key = os.getenv("GOOGLE_API_KEY")
     if google_api_key:
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004", google_api_key=google_api_key)
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-2", google_api_key=google_api_key)
     else:
         print("WARNING: GOOGLE_API_KEY not found. Embeddings will fail.")
     
