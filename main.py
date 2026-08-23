@@ -86,26 +86,45 @@ contextualize_q_system_prompt = (
 )
 contextualize_q_prompt = ChatPromptTemplate.from_messages([
     ("system", contextualize_q_system_prompt),
-    MessagesPlaceholder("chat_history"),
     ("human", "{input}"),
 ])
 
 @app.on_event("startup")
 async def startup_event():
-    global db, retriever
+    global embeddings, qdrant_store, llm_groq, llm_gemini
     
-    # Initialize embeddings
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    print("Loading Google Generative AI Embeddings...")
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+    if google_api_key:
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=google_api_key)
+    else:
+        print("WARNING: GOOGLE_API_KEY not found. Embeddings will fail.")
     
-    # Load Chroma DB
-    if not os.path.exists(CHROMA_DB_DIR):
-        print("Warning: Chroma DB directory not found. Please run ingest.py first.")
-        return
+    print("Connecting to Qdrant Cloud...")
+    qdrant_url = os.getenv("QDRANT_URL")
+    qdrant_api_key = os.getenv("QDRANT_API_KEY")
+    
+    if qdrant_url and qdrant_api_key:
+        client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=60)
+        qdrant_store = QdrantVectorStore(
+            client=client,
+            collection_name="quran_hadith",
+            embedding=embeddings,
+        )
+        print("Connected to Qdrant Cloud successfully.")
+    else:
+        print("WARNING: QDRANT_URL or QDRANT_API_KEY not found. Vector search will fail.")
+
+    print("Initializing LLMs...")
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    if groq_api_key:
+        llm_groq = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant", api_key=groq_api_key)
         
-    db = Chroma(persist_directory=CHROMA_DB_DIR, embedding_function=embeddings)
-    # Reduced 'k' from 10 to 6 to save approximately 40% of input tokens while maintaining high accuracy
-    retriever = db.as_retriever(search_kwargs={"k": 6})
-    print("Vector Database Retriever initialized successfully.")
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if gemini_api_key:
+        llm_gemini = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=gemini_api_key)
+        
+    print("API is ready.")
 
 def get_llm(provider: str):
     if provider.lower() == "groq":
@@ -124,8 +143,8 @@ def get_llm(provider: str):
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    if not db:
-        raise HTTPException(status_code=500, detail="Database is not initialized. Run ingest.py first.")
+    if not qdrant_store:
+        raise HTTPException(status_code=500, detail="Qdrant store is not initialized. Check your credentials.")
         
     try:
         llm = get_llm(request.provider)
@@ -137,7 +156,7 @@ async def chat(request: ChatRequest):
         elif request.filter.lower() == "hadith":
             search_kwargs["filter"] = {"source": "Hadith"}
             
-        temp_retriever = db.as_retriever(search_kwargs=search_kwargs)
+        temp_retriever = qdrant_store.as_retriever(search_kwargs=search_kwargs)
         
         # 1. Query Expansion & History Awareness
         # We use create_history_aware_retriever to rewrite short or contextual queries into detailed standalone search queries.
