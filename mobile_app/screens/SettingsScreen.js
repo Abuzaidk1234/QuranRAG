@@ -147,6 +147,7 @@ export default function SettingsScreen({ navigation, route }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("reading_preferences")}</Text>
 
+          <Text style={[styles.optionText, { marginTop: 15, marginBottom: 10, fontWeight: "bold" }]}>{t("arabic_font_size")}</Text>
           <View style={styles.card}>
             <View style={styles.toggleRow}>
               <Text style={styles.optionText}>{t("show_arabic")}</Text>
@@ -182,7 +183,8 @@ export default function SettingsScreen({ navigation, route }) {
             )}
           </View>
 
-          <View style={[styles.card, { marginTop: 15 }]}>
+          <Text style={[styles.optionText, { marginTop: 15, marginBottom: 10, fontWeight: "bold" }]}>{t("translation_font_size")}</Text>
+          <View style={[styles.card, { marginTop: 0 }]}>
             <View style={styles.toggleRow}>
               <Text style={styles.optionText}>{t("show_translation")}</Text>
               <Switch
