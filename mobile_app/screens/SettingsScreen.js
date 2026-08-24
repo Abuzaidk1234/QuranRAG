@@ -8,15 +8,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { SettingsContext } from "../utils/SettingsContext";
 import Slider from "@react-native-community/slider";
 
-GoogleSignin.configure({
-  scopes: ['https://www.googleapis.com/auth/drive.appdata'],
-  webClientId: '167900378525-chrk02499qs8af1d54069rmtqnk4r0fr.apps.googleusercontent.com', 
-});
+
 
 export default function SettingsScreen({ navigation }) {
   const { themeColors, t, i18n, settings, updateSetting } = React.useContext(SettingsContext);
   const THEME = themeColors;
   const styles = useMemo(() => getStyles(THEME), [THEME]);
+
+  React.useEffect(() => {
+    try {
+      GoogleSignin.configure({
+        scopes: ['https://www.googleapis.com/auth/drive.appdata'],
+        webClientId: '167900378525-chrk02499qs8af1d54069rmtqnk4r0fr.apps.googleusercontent.com', 
+      });
+    } catch(e) { console.log(e); }
+  }, []);
+
 
   const changeLanguage = (lang) => {
     i18n.changeLanguage(lang);
