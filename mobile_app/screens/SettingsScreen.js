@@ -7,12 +7,14 @@ import * as Google from 'expo-auth-session/providers/google';
 import { syncToDrive, syncFromDrive } from '../utils/GoogleDriveSync';
 import { Ionicons } from "@expo/vector-icons";
 import { SettingsContext } from "../utils/SettingsContext";
+import { useTranslation } from "react-i18next";
 import Slider from "@react-native-community/slider";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function SettingsScreen({ navigation }) {
-  const { themeColors, t, i18n, settings, updateSetting } = React.useContext(SettingsContext);
+  const { themeColors, settings, updateSetting } = React.useContext(SettingsContext);
+  const { t, i18n } = useTranslation();
   const THEME = themeColors;
   const styles = useMemo(() => getStyles(THEME), [THEME]);
 

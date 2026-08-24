@@ -17,9 +17,9 @@ import { useTranslation } from "react-i18next";
 import { SettingsContext } from "../utils/SettingsContext";
 
 export default function BookmarksScreen({ navigation }) {
-  const { themeColors } = React.useContext(SettingsContext);
+  const { themeColors, settings } = React.useContext(SettingsContext);
   const THEME = themeColors;
-  const styles = React.useMemo(() => getStyles(THEME), [THEME]);
+  const styles = React.useMemo(() => getStyles(THEME, settings), [THEME, settings]);
   const { t, i18n } = useTranslation();
   const [bookmarks, setBookmarks] = useState([]);
   const [viewMode, setViewMode] = useState("quran");
@@ -163,7 +163,7 @@ export default function BookmarksScreen({ navigation }) {
   );
 }
 
-const getStyles = (THEME) => StyleSheet.create({
+const getStyles = (THEME, settings) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.bg,
