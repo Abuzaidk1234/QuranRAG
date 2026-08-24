@@ -5,27 +5,40 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/custom_menu.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0C4452"
+      "backgroundColor": "#0c4452"
     },
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rahnavard.app",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "splash": {
+        "dark": {
+          "image": "./assets/custom_menu.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#021217"
+        }
+      }
     },
     "android": {
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0c4452"
       },
       "package": "com.rahnavard.app",
-      "versionCode": 1
+      "versionCode": 1,
+      "splash": {
+        "dark": {
+          "image": "./assets/custom_menu.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#021217"
+        },
+        "resizeMode": "contain"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
