@@ -21,15 +21,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { getDatabase, queryDatabase } from "../utils/database";
-
-const THEME = {
-  bg: "#0c4452",
-  surface: "#346671",
-  text: "#ffffff",
-  textMuted: "#8baeb4",
-  accent: "#3ca59d",
-  gold: "#cba153",
-};
+import { SettingsContext } from "../utils/SettingsContext";
+import { useFocusEffect } from "@react-navigation/native";
 
 // ============================================================================
 // ⚙️ EDITABLE SCROLL CONFIGURATION PARAMETERS (Adjust wait time & speed here)
@@ -51,7 +44,7 @@ const toArabicNumber = (num) => {
 };
 
 // 8-Pointed Star Component (Rub el Hizb)
-const Octagram = ({ number, size = 32 }) => {
+const Octagram = ({ number, size = 32, styles }) => {
   return (
     <View
       style={{
@@ -87,9 +80,7 @@ const Octagram = ({ number, size = 32 }) => {
 };
 
 // Top-level memoized Surah Page View (Prevents unmounting and scroll-to-top on state changes)
-const SurahPageView = React.memo(
-  ({
-    surahNumber,
+const SurahPageView = React.memo(({ THEME, styles, surahNumber,
     isCurrent,
     targetAyah,
     currentSurahData,
@@ -101,6 +92,7 @@ const SurahPageView = React.memo(
     handlePinAyah,
     t,
     i18n,
+    settings,
     SCREEN_WIDTH,
   }) => {
     const [localData, setLocalData] = useState(null);
@@ -111,14 +103,14 @@ const SurahPageView = React.memo(
         setLocalData(currentSurahData);
         return;
       }
-      
+
       const load = async () => {
          const fetched = await fetchSurahDataAsync(surahNumber);
          if (isMounted && fetched) {
             setLocalData(fetched);
          }
       };
-      
+
       load();
       return () => { isMounted = false; };
     }, [surahNumber, isCurrent, currentSurahData, fetchSurahDataAsync]);
@@ -303,7 +295,7 @@ const SurahPageView = React.memo(
           return (
             <View style={styles.ayahRow}>
               <View style={styles.ayahLeft}>
-                <Octagram number={ayah.numberInSurah} size={36} />
+                <Octagram styles={styles} number={ayah.numberInSurah} size={36} />
                 <TouchableOpacity
                   style={{ marginTop: 15 }}
                   onPress={() => toggleBookmark(ayah, data.englishName)}
@@ -326,21 +318,29 @@ const SurahPageView = React.memo(
                 </TouchableOpacity>
               </View>
               <View style={styles.ayahRight}>
-                <Text style={styles.ayahArabic}>
-                  {ayah.arabic}{" "}
-                  <Text style={{ color: THEME.textMuted }}>
-                    {"\uFD3F"}
-                    {toArabicNumber(ayah.numberInSurah)}
-                    {"\uFD3E"}
+                {settings?.showArabic !== false && (
+                  <Text style={[styles.ayahArabic, {
+                    fontSize: settings?.arabicFontSize || 32,
+                    lineHeight: (settings?.arabicFontSize || 32) * 1.5,
+                    fontFamily: settings?.arabicScript === "indoPak" ? "System" : undefined
+                  }]}>
+                    {ayah.arabic}{" "}
+                    <Text style={{ color: THEME.textMuted }}>
+                      {"\uFD3F"}
+                      {toArabicNumber(ayah.numberInSurah)}
+                      {"\uFD3E"}
+                    </Text>
                   </Text>
-                </Text>
-                <Text style={styles.ayahEnglish}>
-                  {i18n.language === "ur"
-                    ? ayah.urdu && ayah.urdu.trim() !== ""
-                      ? ayah.urdu
-                      : ayah.english
-                    : ayah.english}
-                </Text>
+                )}
+                {settings?.showTranslation !== false && (
+                  <Text style={[styles.ayahEnglish, { fontSize: settings?.translationFontSize || 17, lineHeight: (settings?.translationFontSize || 17) * 1.5 }]}>
+                    {i18n.language === "ur"
+                      ? ayah.urdu && ayah.urdu.trim() !== ""
+                        ? ayah.urdu
+                        : ayah.english
+                      : ayah.english}
+                  </Text>
+                )}
               </View>
             </View>
           );
@@ -393,9 +393,7 @@ const SurahPageView = React.memo(
 );
 
 // Top-level memoized Juz Page View (Prevents unmounting and scroll-to-top on state changes)
-const JuzPageView = React.memo(
-  ({
-    juzNumber,
+const JuzPageView = React.memo(({ THEME, styles, juzNumber,
     isCurrent,
     currentJuzData,
     fetchJuzDataAsync,
@@ -405,6 +403,7 @@ const JuzPageView = React.memo(
     handlePinAyah,
     t,
     i18n,
+    settings,
     SCREEN_WIDTH,
   }) => {
     const [localData, setLocalData] = useState(null);
@@ -415,14 +414,14 @@ const JuzPageView = React.memo(
         setLocalData(currentJuzData);
         return;
       }
-      
+
       const load = async () => {
          const fetched = await fetchJuzDataAsync(juzNumber);
          if (isMounted && fetched) {
             setLocalData(fetched);
          }
       };
-      
+
       load();
       return () => { isMounted = false; };
     }, [juzNumber, isCurrent, currentJuzData, fetchJuzDataAsync]);
@@ -544,7 +543,7 @@ const JuzPageView = React.memo(
               )}
               <View style={styles.ayahRow}>
                 <View style={styles.ayahLeft}>
-                  <Octagram number={ayah.numberInSurah} size={36} />
+                  <Octagram styles={styles} number={ayah.numberInSurah} size={36} />
                   <TouchableOpacity
                     style={{ marginTop: 15 }}
                     onPress={() => toggleBookmark(ayah, ayah.surahNameEnglish)}
@@ -567,21 +566,29 @@ const JuzPageView = React.memo(
                   </TouchableOpacity>
                 </View>
                 <View style={styles.ayahRight}>
-                  <Text style={styles.ayahArabic}>
-                    {ayah.arabic}{" "}
-                    <Text style={{ color: THEME.textMuted }}>
-                      {"\uFD3F"}
-                      {toArabicNumber(ayah.numberInSurah)}
-                      {"\uFD3E"}
+                  {settings?.showArabic !== false && (
+                    <Text style={[styles.ayahArabic, {
+                      fontSize: settings?.arabicFontSize || 32,
+                      lineHeight: (settings?.arabicFontSize || 32) * 1.5,
+                      fontFamily: settings?.arabicScript === "indoPak" ? "System" : undefined
+                    }]}>
+                      {ayah.arabic}{" "}
+                      <Text style={{ color: THEME.textMuted }}>
+                        {"\uFD3F"}
+                        {toArabicNumber(ayah.numberInSurah)}
+                        {"\uFD3E"}
+                      </Text>
                     </Text>
-                  </Text>
-                  <Text style={styles.ayahEnglish}>
-                    {i18n.language === "ur"
-                      ? ayah.urdu && ayah.urdu.trim() !== ""
-                        ? ayah.urdu
-                        : ayah.english
-                      : ayah.english}
-                  </Text>
+                  )}
+                  {settings?.showTranslation !== false && (
+                    <Text style={[styles.ayahEnglish, { fontSize: settings?.translationFontSize || 17, lineHeight: (settings?.translationFontSize || 17) * 1.5 }]}>
+                      {i18n.language === "ur"
+                        ? ayah.urdu && ayah.urdu.trim() !== ""
+                          ? ayah.urdu
+                          : ayah.english
+                        : ayah.english}
+                    </Text>
+                  )}
                 </View>
               </View>
             </View>
@@ -593,7 +600,11 @@ const JuzPageView = React.memo(
 );
 
 export default function QuranScreen({ navigation }) {
+  const { themeColors } = React.useContext(SettingsContext);
+  const THEME = themeColors;
+  const styles = React.useMemo(() => getStyles(THEME), [THEME]);
   const { t, i18n } = useTranslation();
+  const { settings } = React.useContext(SettingsContext);
   const [surahs, setSurahs] = useState([]);
   const [selectedSurah, setSelectedSurah] = useState(null);
   const [surahData, setSurahData] = useState(null);
@@ -608,23 +619,25 @@ export default function QuranScreen({ navigation }) {
   const [juzs, setJuzs] = useState([]);
   const [juzData, setJuzData] = useState(null);
 
-  useEffect(() => {
-    const backAction = () => {
-      if (selectedSurah || juzData) {
-        setSelectedSurah(null);
-        setSurahData(null);
-        setJuzData(null);
-        setTargetScrollAyah(null);
-        return true;
-      }
-      return false;
-    };
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      backAction
-    );
-    return () => backHandler.remove();
-  }, [selectedSurah, juzData]);
+  useFocusEffect(
+    useCallback(() => {
+      const backAction = () => {
+        if (selectedSurah || juzData) {
+          setSelectedSurah(null);
+          setSurahData(null);
+          setJuzData(null);
+          setTargetScrollAyah(null);
+          return true;
+        }
+        return false;
+      };
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        backAction
+      );
+      return () => backHandler.remove();
+    }, [selectedSurah, juzData])
+  );
 
   const [lastRead, setLastRead] = useState(null);
   const scrollViewRef = useRef(null);
@@ -1007,7 +1020,7 @@ export default function QuranScreen({ navigation }) {
         >
           <Text
             style={{
-              color: "#ffffff",
+              color: THEME.text,
               fontSize: 14,
               textAlign: "center",
             }}
@@ -1048,7 +1061,7 @@ export default function QuranScreen({ navigation }) {
         >
           <Text
             style={{
-              color: "#ffffff",
+              color: THEME.text,
               fontSize: 15,
               textAlign: "center",
             }}
@@ -1118,8 +1131,7 @@ export default function QuranScreen({ navigation }) {
             }}
             renderItem={({ item }) => (
               <View style={{ width: SCREEN_WIDTH, height: "100%" }}>
-                <JuzPageView
-                  juzNumber={item}
+                <JuzPageView THEME={THEME} styles={styles} juzNumber={item}
                   isCurrent={item === juzData?.juz}
                   currentJuzData={juzData}
                   fetchJuzDataAsync={fetchJuzDataAsync}
@@ -1129,6 +1141,7 @@ export default function QuranScreen({ navigation }) {
                   handlePinAyah={handlePinAyah}
                   t={t}
                   i18n={i18n}
+                  settings={settings}
                   SCREEN_WIDTH={SCREEN_WIDTH}
                 />
               </View>
@@ -1188,8 +1201,7 @@ export default function QuranScreen({ navigation }) {
             }}
             renderItem={({ item }) => (
               <View style={{ width: SCREEN_WIDTH, height: "100%" }}>
-                <SurahPageView
-                  surahNumber={item}
+                <SurahPageView THEME={THEME} styles={styles} surahNumber={item}
                   isCurrent={item === selectedSurah}
                   targetAyah={
                     item === selectedSurah && targetSurahIdRef.current === item
@@ -1205,6 +1217,7 @@ export default function QuranScreen({ navigation }) {
                   handlePinAyah={handlePinAyah}
                   t={t}
                   i18n={i18n}
+                  settings={settings}
                   SCREEN_WIDTH={SCREEN_WIDTH}
                 />
               </View>
@@ -1291,7 +1304,7 @@ export default function QuranScreen({ navigation }) {
                       style={styles.listItem}
                       onPress={() => loadSurah(item.number)}
                     >
-                      <Octagram number={item.number} size={38} />
+                      <Octagram styles={styles} number={item.number} size={38} />
                       <View style={styles.listTextContainer}>
                         <Text style={[styles.listTitle, { textAlign: "left" }]}>
                           {t(item.englishName)}
@@ -1328,7 +1341,7 @@ export default function QuranScreen({ navigation }) {
                       style={styles.listItem}
                       onPress={() => loadJuz(item.id)}
                     >
-                      <Octagram number={item.id} size={38} />
+                      <Octagram styles={styles} number={item.id} size={38} />
                       <View style={styles.listTextContainer}>
                         <Text style={[styles.listTitle, { textAlign: "left" }]}>
                           {`${t("juz")} ${item.id}`}
@@ -1354,11 +1367,7 @@ export default function QuranScreen({ navigation }) {
       </View>
 
       <LinearGradient
-        colors={[
-          "rgba(12, 68, 82, 1)",
-          "rgba(12, 68, 82, 1)",
-          "rgba(12, 68, 82, 1)",
-        ]}
+        colors={[`rgba(${THEME.bgRgb}, 1)`, `rgba(${THEME.bgRgb}, 0.9)`, `rgba(${THEME.bgRgb}, 0)`]}
         locations={[0, 0.7, 1]}
         style={styles.floatingHeader}
       >
@@ -1372,6 +1381,20 @@ export default function QuranScreen({ navigation }) {
                 <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
                   Surahs
                 </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Settings")}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: "rgba(255,255,255,0.15)",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginRight: 10
+                }}
+              >
+                <Ionicons name="settings-sharp" size={20} color={THEME.text} />
               </TouchableOpacity>
             </View>
 
@@ -1411,6 +1434,20 @@ export default function QuranScreen({ navigation }) {
                   Juzs
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Settings")}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: "rgba(255,255,255,0.15)",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginRight: 10
+                }}
+              >
+                <Ionicons name="settings-sharp" size={20} color={THEME.text} />
+              </TouchableOpacity>
             </View>
 
             <View
@@ -1439,28 +1476,43 @@ export default function QuranScreen({ navigation }) {
             </ScrollView>
           </View>
         ) : (
-          <View style={styles.headerRow}>
-            <TouchableOpacity
-              onPress={() => {
-                Keyboard.dismiss();
-                navigation.openDrawer();
-              }}
-              style={{
-                width: 40,
-                height: 40,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <Image
-                source={require("../assets/custom_menu.png")}
-                style={{ width: 40, height: 40 }}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-            <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
-              {t("read_quran")}
-            </Text>
+          <View style={[styles.headerRow, { justifyContent: "space-between", width: "100%" }]}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <TouchableOpacity
+                onPress={() => {
+                  Keyboard.dismiss();
+                  navigation.openDrawer();
+                }}
+                style={{
+                  width: 40,
+                  height: 40,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#0c4452',
+                borderWidth: 0.5,
+                borderColor: 'rgba(146, 105, 17, 100)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Image
+                  source={require('../assets/custom_menu.png')}
+                  style={{ width: 36, height: 36 }}
+                  resizeMode='contain'
+                />
+              </View>
+
+              </TouchableOpacity>
+              <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
+                {t("read_quran")}
+              </Text>
+            </View>
           </View>
         )}
       </LinearGradient>
@@ -1468,15 +1520,9 @@ export default function QuranScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (THEME) => StyleSheet.create({
   container: { flex: 1, backgroundColor: THEME.bg },
-  toggleBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
+  toggleBtn: { flex: 1, paddingVertical: 10, alignItems: "center", borderBottomWidth: 2, borderBottomColor: "transparent" },
   toggleBtnActive: { borderBottomColor: THEME.gold },
   toggleBtnText: { color: THEME.textMuted, fontSize: 16, fontWeight: "600" },
   toggleBtnTextActive: { color: THEME.gold },
@@ -1491,16 +1537,7 @@ const styles = StyleSheet.create({
   listBadgeText: { color: THEME.gold, fontWeight: "bold", fontSize: 16 },
   content: { flex: 1 },
 
-  floatingHeader: {
-    zIndex: 10,
-    position: "absolute",
-    top: 0,
-    width: "100%",
-    paddingTop: Platform.OS === "ios" ? 50 : 50,
-    backgroundColor: "#0c4452",
-    borderBottomWidth: 1,
-    borderBottomColor: "#1a505e",
-  },
+  floatingHeader: { zIndex: 10, position: "absolute", top: 0, width: "100%", paddingTop: Platform.OS === "ios" ? 50 : 50, backgroundColor: "transparent", borderBottomWidth: 0, borderBottomColor: "transparent" },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1514,10 +1551,10 @@ const styles = StyleSheet.create({
   surahNavRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: "#1a505e",
+    borderBottomColor: THEME.inputBg,
     marginHorizontal: 0,
   },
-  surahNavText: { color: "#ffffff", fontSize: 13 },
+  surahNavText: { color: THEME.text, fontSize: 13 },
   surahNavActiveText: { color: THEME.gold, fontSize: 14, fontWeight: "bold" },
 
   listItem: {

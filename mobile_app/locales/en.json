@@ -450,6 +450,18 @@
     "references_sources": "References & Sources",
     "app_name": "Rahnavard",
     "guest_user": "Guest",
-    "everything": "Everything"
+    "everything": "Everything",
+    "reading_preferences": "Reading Preferences",
+    "arabic_font_size": "Arabic Font Size",
+    "show_translation": "Show Translation",
+    "translation_font_size": "Translation Font Size",
+    "arabic_script_style": "Arabic Script Style",
+    "uthmani": "Uthmani",
+    "indo_pak": "Indo-Pak",
+    "appearance_coming_soon": "Appearance (Coming Soon)",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "show_arabic": "Show Arabic"
   }
 }

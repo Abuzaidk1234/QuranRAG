@@ -13,18 +13,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
-const THEME = {
-  bg: "#0c4452",
-  surface: "#346671",
-  text: "#ffffff",
-  textMuted: "#8baeb4",
-  accent: "#3ca59d",
-  gold: "#cba153",
-};
-
 import { useTranslation } from "react-i18next";
+import { SettingsContext } from "../utils/SettingsContext";
 
 export default function BookmarksScreen({ navigation }) {
+  const { themeColors } = React.useContext(SettingsContext);
+  const THEME = themeColors;
+  const styles = React.useMemo(() => getStyles(THEME), [THEME]);
   const { t, i18n } = useTranslation();
   const [bookmarks, setBookmarks] = useState([]);
   const [viewMode, setViewMode] = useState("quran");
@@ -125,11 +120,7 @@ export default function BookmarksScreen({ navigation }) {
       </ScrollView>
 
       <LinearGradient
-        colors={[
-          "rgba(12, 68, 82, 1)",
-          "rgba(12, 68, 82, 0.9)",
-          "rgba(12, 68, 82, 0)",
-        ]}
+        colors={[`rgba(${THEME.bgRgb}, 1)`, `rgba(${THEME.bgRgb}, 0.9)`, `rgba(${THEME.bgRgb}, 0)`]}
         locations={[0, 0.6, 1]}
         style={styles.floatingHeader}
       >
@@ -145,11 +136,24 @@ export default function BookmarksScreen({ navigation }) {
             alignItems: "center",
           }}
         >
-          <Image
-            source={require("../assets/custom_menu.png")}
-            style={{ width: 40, height: 40 }}
-            resizeMode="contain"
-          />
+
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#0c4452',
+                borderWidth: 0.5,
+                borderColor: 'rgba(146, 105, 17, 100)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Image
+                  source={require('../assets/custom_menu.png')}
+                  style={{ width: 36, height: 36 }}
+                  resizeMode='contain'
+                />
+              </View>
+
         </TouchableOpacity>
         <Text style={[styles.headerTitle, {textAlign: "left"}]} numberOfLines={1}>
           {t("bookmarks")}
@@ -159,7 +163,7 @@ export default function BookmarksScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (THEME) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.bg,
@@ -170,7 +174,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: THEME.bg,
     borderBottomWidth: 1,
-    borderBottomColor: "#1a505e",
+    borderBottomColor: THEME.inputBg,
     marginBottom: 20,
   },
   toggleBtn: {

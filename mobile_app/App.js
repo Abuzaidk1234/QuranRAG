@@ -43,16 +43,6 @@ import { useTranslation } from "react-i18next";
 import SettingsScreen from "./screens/SettingsScreen";
 
 const Drawer = createDrawerNavigator();
-const THEME = {
-  bg: "#0c4452",
-  inputBg: "#346671",
-  text: "#ffffff",
-  active: "#275862",
-  userBubble: "#1b5b69",
-  aiBubble: "#08333e",
-  gold: "#cba153",
-};
-
 // --- Context ---
 const ChatContext = createContext();
 
@@ -133,6 +123,9 @@ const ChatProvider = ({ children }) => {
 
 // --- Custom Sidebar (Drawer) ---
 function CustomDrawerContent(props) {
+  const { themeColors } = React.useContext(SettingsContext);
+  const THEME = themeColors;
+  const styles = React.useMemo(() => getStyles(THEME), [THEME]);
   const { t } = useTranslation();
   const activeRoute = props.state.routeNames[props.state.index];
   const {
@@ -151,11 +144,24 @@ function CustomDrawerContent(props) {
           style={styles.drawerHeader}
           onPress={() => props.navigation.navigate("Home")}
         >
-          <Image
-            source={require("./assets/custom_menu.png")}
-            style={{ width: 40, height: 40 }}
-            resizeMode="contain"
-          />
+
+              <View style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: '#0c4452',
+                  borderWidth: 0.5,
+                  borderColor: 'rgba(146, 105, 17, 100)',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+              }}>
+                <Image
+                  source={require('./assets/custom_menu.png')}
+                  style={{ width: 36, height: 36 }}
+                  resizeMode='contain'
+                />
+              </View>
+
           <Text style={styles.drawerTitle}>{t("app_name")}</Text>
         </TouchableOpacity>
 
@@ -303,6 +309,9 @@ function CustomDrawerContent(props) {
 
 // --- Placeholder Screen for Routing ---
 function PlaceholderScreen({ route, navigation }) {
+  const { themeColors } = React.useContext(SettingsContext);
+  const THEME = themeColors;
+  const styles = React.useMemo(() => getStyles(THEME), [THEME]);
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -318,11 +327,24 @@ function PlaceholderScreen({ route, navigation }) {
             alignItems: "center",
           }}
         >
-          <Image
-            source={require("./assets/custom_menu.png")}
-            style={{ width: 40, height: 40 }}
-            resizeMode="contain"
-          />
+
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#0c4452',
+                borderWidth: 0.5,
+                borderColor: 'rgba(146, 105, 17, 100)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Image
+                  source={require('./assets/custom_menu.png')}
+                  style={{ width: 36, height: 36 }}
+                  resizeMode='contain'
+                />
+              </View>
+
         </TouchableOpacity>
       </View>
       <View style={styles.centerContent}>
@@ -375,7 +397,11 @@ const SearchInputBar = ({
   sendMessage,
   isLoading,
   t,
-}) => (
+}) => {
+  const { themeColors } = React.useContext(SettingsContext);
+  const THEME = themeColors;
+  const styles = React.useMemo(() => getStyles(THEME), [THEME]);
+  return (
   <View style={{ width: "100%", maxWidth: 600, position: "relative" }}>
     {/* Small Inline Popup Menu */}
     {filterModalVisible && (
@@ -519,10 +545,14 @@ const SearchInputBar = ({
       </View>
     </View>
   </View>
-);
+  );
+};
 
 // --- Main Chat Screen ---
 function HomeScreen({ navigation }) {
+  const { themeColors } = React.useContext(SettingsContext);
+  const THEME = themeColors;
+  const styles = React.useMemo(() => getStyles(THEME), [THEME]);
   const { t, i18n } = useTranslation();
   const scrollViewRef = useRef(null);
   const messagePositions = useRef({});
@@ -667,6 +697,7 @@ function HomeScreen({ navigation }) {
       {messages.length === 0 ? (
         // --- Landing Page View ---
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+          <View style={{ flex: 1 }}>
           {/* Top Bar (Non-floating) */}
           <View style={styles.header}>
             <TouchableOpacity
@@ -681,11 +712,24 @@ function HomeScreen({ navigation }) {
                 alignItems: "center",
               }}
             >
-              <Image
-                source={require("./assets/custom_menu.png")}
-                style={{ width: 40, height: 40 }}
-                resizeMode="contain"
-              />
+
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#0c4452',
+                borderWidth: 0.5,
+                borderColor: 'rgba(146, 105, 17, 100)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Image
+                  source={require('./assets/custom_menu.png')}
+                  style={{ width: 36, height: 36 }}
+                  resizeMode='contain'
+                />
+              </View>
+
             </TouchableOpacity>
           </View>
           <View
@@ -721,13 +765,13 @@ function HomeScreen({ navigation }) {
           </View>
 
           {/* Floating Bottom Footer (Keyboard avoiding) */}
-          <View style={{ width: "100%" }}>
+          <View style={{ width: "100%", position: "absolute", bottom: 0, zIndex: 10 }}>
             <LinearGradient
               colors={[
-                "rgba(12, 68, 82, 0)",
-                "rgba(12, 68, 82, 0.9)",
-                "rgba(12, 68, 82, 1)",
-                "rgba(12, 68, 82, 1)",
+                `rgba(${THEME.bgRgb}, 0)`,
+                `rgba(${THEME.bgRgb}, 0.9)`,
+                `rgba(${THEME.bgRgb}, 1)`,
+                `rgba(${THEME.bgRgb}, 1)`,
               ]}
               locations={[0, 0.3, 0.5, 1]}
               style={styles.floatingFooter}
@@ -786,11 +830,13 @@ function HomeScreen({ navigation }) {
               />
             </LinearGradient>
           </View>
+          </View>
         </KeyboardAvoidingView>
       ) : (
         // --- Active Chat View ---
         // --- Active Chat View ---
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+          <View style={{ flex: 1 }}>
           {/* ScrollView is absolutely positioned to underlap everything */}
           <ScrollView
             ref={scrollViewRef}
@@ -859,9 +905,9 @@ function HomeScreen({ navigation }) {
           {/* Floating Top Header */}
           <LinearGradient
             colors={[
-              "rgba(12, 68, 82, 1)",
-              "rgba(12, 68, 82, 0.8)",
-              "rgba(12, 68, 82, 0)",
+              `rgba(${THEME.bgRgb}, 1)`,
+              `rgba(${THEME.bgRgb}, 0.8)`,
+              `rgba(${THEME.bgRgb}, 0)`,
             ]}
             style={styles.floatingHeader}
           >
@@ -877,31 +923,36 @@ function HomeScreen({ navigation }) {
                 alignItems: "center",
               }}
             >
-              <View
-                style={{
-                  position: "absolute",
-                  backgroundColor: "#346671",
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                }}
-              />
-              <Image
-                source={require("./assets/custom_menu.png")}
-                style={{ width: 40, height: 40 }}
-                resizeMode="contain"
-              />
+
+
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#0c4452',
+                borderWidth: 0.5,
+                borderColor: 'rgba(146, 105, 17, 100)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Image
+                  source={require('./assets/custom_menu.png')}
+                  style={{ width: 36, height: 36 }}
+                  resizeMode='contain'
+                />
+              </View>
+
             </TouchableOpacity>
           </LinearGradient>
 
           {/* Floating Bottom Footer (Keyboard avoiding) */}
-          <View style={{ width: "100%" }}>
+          <View style={{ width: "100%", position: "absolute", bottom: 0, zIndex: 10 }}>
             <LinearGradient
               colors={[
-                "rgba(12, 68, 82, 0)",
-                "rgba(12, 68, 82, 0.9)",
-                "rgba(12, 68, 82, 1)",
-                "rgba(12, 68, 82, 1)",
+                `rgba(${THEME.bgRgb}, 0)`,
+                `rgba(${THEME.bgRgb}, 0.9)`,
+                `rgba(${THEME.bgRgb}, 1)`,
+                `rgba(${THEME.bgRgb}, 1)`,
               ]}
               locations={[0, 0.3, 0.5, 1]}
               style={styles.floatingFooter}
@@ -918,6 +969,7 @@ function HomeScreen({ navigation }) {
                 isLoading={isLoading}
               />
             </LinearGradient>
+          </View>
           </View>
         </KeyboardAvoidingView>
       )}
@@ -983,6 +1035,52 @@ const renderMarkdown = (text, textStyle) => {
   });
 };
 
+
+import { SettingsProvider, SettingsContext } from "./utils/SettingsContext";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
+const Stack = createNativeStackNavigator();
+
+function DrawerNavigator() {
+  const { themeColors } = React.useContext(SettingsContext);
+  const THEME = themeColors;
+  return (
+    <Drawer.Navigator
+      drawerContent={(props) => <CustomDrawerContent {...props} />}
+      screenOptions={{
+        headerShown: false,
+        drawerStyle: { backgroundColor: THEME.bg, width: 280 },
+        swipeEnabled: false,
+      }}
+    >
+      <Drawer.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          swipeEnabled: true,
+          swipeEdgeWidth: Dimensions.get("window").width,
+          swipeMinDistance: 20,
+        }}
+      />
+      <Drawer.Screen
+        name="ReadQuran"
+        component={QuranScreen}
+        options={{ swipeEnabled: false }}
+      />
+      <Drawer.Screen
+        name="ReadHadiths"
+        component={HadithScreen}
+        options={{ swipeEnabled: false }}
+      />
+      <Drawer.Screen
+        name="Bookmarks"
+        component={BookmarksScreen}
+        options={{ swipeEnabled: false }}
+      />
+    </Drawer.Navigator>
+  );
+}
+
 export default function App() {
   let [fontsLoaded] = useFonts({ GreatVibes_400Regular });
 
@@ -990,54 +1088,21 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <ChatProvider>
-        <NavigationContainer>
-          <Drawer.Navigator
-            drawerContent={(props) => <CustomDrawerContent {...props} />}
-            screenOptions={{
-              headerShown: false,
-              drawerStyle: { backgroundColor: THEME.bg, width: 280 },
-              swipeEnabled: false,
-            }}
-          >
-            <Drawer.Screen
-              name="Home"
-              component={HomeScreen}
-              options={{
-                swipeEnabled: true,
-                swipeEdgeWidth: Dimensions.get("window").width,
-                swipeMinDistance: 20,
-              }}
-            />
-            <Drawer.Screen
-              name="ReadQuran"
-              component={QuranScreen}
-              options={{ swipeEnabled: false }}
-            />
-            <Drawer.Screen
-              name="ReadHadiths"
-              component={HadithScreen}
-              options={{ swipeEnabled: false }}
-            />
-            <Drawer.Screen
-              name="Bookmarks"
-              component={BookmarksScreen}
-              options={{ swipeEnabled: false }}
-            />
-            <Drawer.Screen
-              name="Settings"
-              component={SettingsScreen}
-              options={{ swipeEnabled: false }}
-            />
-          </Drawer.Navigator>
-        </NavigationContainer>
-      </ChatProvider>
+      <SettingsProvider>
+        <ChatProvider>
+          <NavigationContainer>
+            <Stack.Navigator screenOptions={{ headerShown: false, presentation: "modal" }}>
+              <Stack.Screen name="Drawer" component={DrawerNavigator} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </ChatProvider>
+      </SettingsProvider>
     </SafeAreaProvider>
   );
 }
 
-// --- Styles ---
-const styles = StyleSheet.create({
+const getStyles = (THEME) => StyleSheet.create({
   container: { flex: 1, backgroundColor: THEME.bg },
   header: {
     paddingHorizontal: 25,

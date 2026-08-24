@@ -157,10 +157,13 @@ async def chat(request: ChatRequest):
             
         temp_retriever = qdrant_store.as_retriever(search_kwargs=search_kwargs)
         
-        # 1. Query Expansion & History Awareness
-        # We use create_history_aware_retriever to rewrite short or contextual queries into detailed standalone search queries.
+                # 1. Query Expansion & History Awareness
+        try:
+            fast_llm = ChatGroq(model_name='llama-3.1-8b-instant', groq_api_key=os.getenv('GROQ_API_KEY'), temperature=0)
+        except Exception:
+            fast_llm = llm
         history_aware_retriever = create_history_aware_retriever(
-            llm, temp_retriever, contextualize_q_prompt
+            fast_llm, temp_retriever, contextualize_q_prompt
         )
         
         question_answer_chain = create_stuff_documents_chain(llm, prompt_template)

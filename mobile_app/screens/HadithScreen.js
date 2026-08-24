@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useContext } from "react";
 import {
   View,
   Text,
@@ -20,19 +20,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getDatabase, queryDatabase } from "../utils/database";
-
-const THEME = {
-  bg: "#0c4452",
-  inputBg: "#346671",
-  text: "#ffffff",
-  active: "#275862",
-  gold: "#cba153",
-};
+import { useFocusEffect } from "@react-navigation/native";
+import { SettingsContext } from "../utils/SettingsContext";
 
 import { useTranslation } from "react-i18next";
 
 export default function HadithScreen({ navigation }) {
+  const { themeColors } = React.useContext(SettingsContext);
+  const THEME = themeColors;
+  const styles = React.useMemo(() => getStyles(THEME), [THEME]);
   const { t, i18n } = useTranslation();
+  const { settings } = useContext(SettingsContext);
   const [books, setBooks] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -49,29 +47,33 @@ export default function HadithScreen({ navigation }) {
   const [bookmarks, setBookmarks] = useState([]);
   const dbRef = useRef(null);
 
-  useEffect(() => {
-    const backAction = () => {
-      if (searchedHadith) {
-        setSearchedHadith(null);
-        setSearchQuery("");
-        return true;
-      }
-      if (selectedChapter) {
-        setSelectedChapter(null);
-        return true;
-      }
-      if (selectedBook) {
-        setSelectedBook(null);
-        return true;
-      }
-      return false;
-    };
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      backAction,
-    );
-    return () => backHandler.remove();
-  }, [searchedHadith, selectedChapter, selectedBook]);
+  useFocusEffect(
+    useCallback(() => {
+      const backAction = () => {
+        if (searchedHadith) {
+          setSearchedHadith(null);
+          setSearchQuery("");
+          return true;
+        } else if (selectedChapter) {
+          setSelectedChapter(null);
+          setHadiths([]);
+          setChapterSearchQuery("");
+          return true;
+        } else if (selectedBook) {
+          setSelectedBook(null);
+          setChapters([]);
+          setSearchQuery("");
+          return true;
+        }
+        return false;
+      };
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        backAction,
+      );
+      return () => backHandler.remove();
+    }, [searchedHadith, selectedChapter, selectedBook])
+  );
 
   const loadBookmarks = async () => {
     try {
@@ -123,9 +125,9 @@ export default function HadithScreen({ navigation }) {
         dbRef.current = db;
         const booksData = await queryDatabase(
           db,
-          `SELECT b.id, b.name, b.collection, COUNT(h.id) as total_hadiths 
-           FROM hadith_books b 
-           LEFT JOIN hadiths h ON b.id = h.book_id 
+          `SELECT b.id, b.name, b.collection, COUNT(h.id) as total_hadiths
+           FROM hadith_books b
+           LEFT JOIN hadiths h ON b.id = h.book_id
            GROUP BY b.id
            ORDER BY CASE b.id
              WHEN 'bukhari' THEN 1
@@ -326,10 +328,29 @@ export default function HadithScreen({ navigation }) {
                   />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.arabicText}>{searchedHadith.arabic}</Text>
-              <Text style={styles.englishText}>
-                {i18n.language === "ur" ? (searchedHadith.urdu || "اردو ترجمہ دستیاب نہیں ہے۔") : (searchedHadith.english?.text || searchedHadith.english || searchedHadith.text)}
-              </Text>
+              {settings.showArabic && (
+                <Text style={[
+                  styles.arabicText,
+                  {
+                    fontSize: settings.arabicFontSize,
+                    lineHeight: settings.arabicFontSize * 1.5,
+                    fontFamily: settings.arabicScript === "indoPak" ? "System" : undefined,
+                  }
+                ]}>
+                  {searchedHadith.arabic}
+                </Text>
+              )}
+              {settings.showTranslation && (
+                <Text style={[
+                  styles.englishText,
+                  {
+                    fontSize: settings.translationFontSize,
+                    lineHeight: settings.translationFontSize * 1.5
+                  }
+                ]}>
+                  {i18n.language === "ur" ? (searchedHadith.urdu || "اردو ترجمہ دستیاب نہیں ہے") : (searchedHadith.english?.text || searchedHadith.english || searchedHadith.text)}
+                </Text>
+              )}
             </View>
           </ScrollView>
         ) : selectedChapter ? (
@@ -422,14 +443,33 @@ export default function HadithScreen({ navigation }) {
                     />
                   </TouchableOpacity>
                 </View>
-                <Text style={styles.arabicText}>{hadith.arabic}</Text>
-                <Text style={styles.englishText}>
-                  {i18n.language === "ur"
-                    ? hadith.urdu || "اردو ترجمہ دستیاب نہیں ہے۔"
-                    : hadith.english?.text ||
-                      hadith.english ||
-                      hadith.text}
-                </Text>
+                {settings.showArabic && (
+                  <Text style={[
+                    styles.arabicText,
+                    {
+                      fontSize: settings.arabicFontSize,
+                      lineHeight: settings.arabicFontSize * 1.5,
+                      fontFamily: settings.arabicScript === "indoPak" ? "System" : undefined,
+                    }
+                  ]}>
+                    {hadith.arabic}
+                  </Text>
+                )}
+                {settings.showTranslation && (
+                  <Text style={[
+                    styles.englishText,
+                    {
+                      fontSize: settings.translationFontSize,
+                      lineHeight: settings.translationFontSize * 1.5
+                    }
+                  ]}>
+                    {i18n.language === "ur"
+                      ? hadith.urdu || "اردو ترجمہ دستیاب نہیں ہے"
+                      : hadith.english?.text ||
+                        hadith.english ||
+                        hadith.text}
+                  </Text>
+                )}
               </View>
             )}
           />
@@ -560,63 +600,94 @@ export default function HadithScreen({ navigation }) {
       {/* Floating Header */}
       <LinearGradient
         colors={[
-          "rgba(12, 68, 82, 1)",
-          "rgba(12, 68, 82, 0.9)",
-          "rgba(12, 68, 82, 0)",
+          `rgba(${THEME.bgRgb}, 1)`,
+          `rgba(${THEME.bgRgb}, 0.9)`,
+          `rgba(${THEME.bgRgb}, 0)`,
         ]}
         locations={[0, 0.6, 1]}
         style={styles.floatingHeader}
       >
         {selectedBook ? (
-          <TouchableOpacity onPress={goBack} style={styles.headerRow}>
-            <Ionicons name="arrow-back" size={28} color={THEME.text} />
-            <Text
-              style={[
-                styles.headerTitle,
-                {
-                  textAlign: "left",
-                  fontSize: i18n.language === "ur" ? 17 : 16,
-                  lineHeight: 22,
-                },
-              ]}
-              numberOfLines={2}
-              adjustsFontSizeToFit
+          <View style={[styles.headerRow, { justifyContent: "space-between" }]}>
+            <TouchableOpacity onPress={goBack} style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+              <Ionicons name="arrow-back" size={28} color={THEME.text} />
+              <Text
+                style={[
+                  styles.headerTitle,
+                  {
+                    textAlign: "left",
+                    fontSize: i18n.language === "ur" ? 17 : 16,
+                    lineHeight: 22,
+                  },
+                ]}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+              >
+                {searchedHadith
+                  ? t("hadith_number", { number: searchedHadith.idInBook })
+                  : selectedChapter
+                    ? i18n.language === "ur"
+                      ? selectedChapter.arabic || t(selectedChapter.english)
+                      : selectedChapter.english
+                    : t(selectedBook.id)}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Settings")}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: "rgba(255,255,255,0.15)",
+                justifyContent: "center",
+                alignItems: "center",
+                marginRight: 10
+              }}
             >
-              {searchedHadith
-                ? t("hadith_number", { number: searchedHadith.idInBook })
-                : selectedChapter
-                  ? i18n.language === "ur"
-                    ? selectedChapter.arabic || t(selectedChapter.english)
-                    : selectedChapter.english
-                  : t(selectedBook.id)}
-            </Text>
-          </TouchableOpacity>
+              <Ionicons name="settings-sharp" size={20} color={THEME.text} />
+            </TouchableOpacity>
+          </View>
         ) : (
-          <TouchableOpacity
-            onPress={() => {
-              Keyboard.dismiss();
-              navigation.openDrawer();
-            }}
-            style={{
-              width: 40,
-              height: 40,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Image
-              source={require("../assets/custom_menu.png")}
-              style={{ width: 40, height: 40 }}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
+          <View style={[styles.headerRow, { justifyContent: "space-between", width: "100%" }]}>
+            <TouchableOpacity
+              onPress={() => {
+                Keyboard.dismiss();
+                navigation.openDrawer();
+              }}
+              style={{
+                width: 40,
+                height: 40,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#0c4452',
+                borderWidth: 0.5,
+                borderColor: 'rgba(146, 105, 17, 100)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Image
+                  source={require('../assets/custom_menu.png')}
+                  style={{ width: 36, height: 36 }}
+                  resizeMode='contain'
+                />
+              </View>
+
+            </TouchableOpacity>
+          </View>
         )}
       </LinearGradient>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (THEME) => StyleSheet.create({
   container: { flex: 1, backgroundColor: THEME.bg },
   floatingHeader: {
     zIndex: 10,

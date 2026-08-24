@@ -450,6 +450,18 @@
     "references_sources": "حوالہ جات اور ذرائع",
     "app_name": "رہنورد",
     "guest_user": "مہمان",
-    "everything": "سب کچھ"
+    "everything": "سب کچھ",
+    "reading_preferences": "پڑھنے کی ترجیحات",
+    "arabic_font_size": "عربی فونٹ کا سائز",
+    "show_translation": "ترجمہ دکھائیں",
+    "translation_font_size": "ترجمہ کا فونٹ سائز",
+    "arabic_script_style": "عربی رسم الخط",
+    "uthmani": "عثمانی",
+    "indo_pak": "انڈو-پاک",
+    "appearance_coming_soon": "ظاہری شکل (جلد آ رہا ہے)",
+    "light": "روشن",
+    "dark": "تاریک",
+    "system": "سسٹم",
+    "show_arabic": "عربی دکھائیں"
   }
 }
