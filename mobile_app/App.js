@@ -295,9 +295,19 @@ function CustomDrawerContent(props) {
 
         {/* Footer */}
         <View style={styles.drawerFooter}>
-          <Ionicons name="person-circle" size={32} color={THEME.text} />
-          <Text style={styles.drawerTitle}>{t("guest_user")}</Text>
-          <View style={{ flex: 1 }} />
+          <TouchableOpacity 
+            style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
+            onPress={() => {
+              if (!settings.googleConnected) {
+                props.navigation.navigate("Settings", { action: 'googleLogin' });
+              } else {
+                props.navigation.navigate("Settings", { action: 'scrollToAccount' });
+              }
+            }}
+          >
+            <Ionicons name="person-circle" size={32} color={THEME.text} />
+            <Text style={styles.drawerTitle}>{settings.googleConnected ? t("connected") : t("guest_user")}</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => props.navigation.navigate("Settings")}>
             <Ionicons name="settings-sharp" size={24} color={THEME.text} />
           </TouchableOpacity>

@@ -12,11 +12,28 @@ import Slider from "@react-native-community/slider";
 
 WebBrowser.maybeCompleteAuthSession();
 
-export default function SettingsScreen({ navigation }) {
+export default function SettingsScreen({ navigation, route }) {
   const { themeColors, settings, updateSetting } = React.useContext(SettingsContext);
   const { t, i18n } = useTranslation();
   const THEME = themeColors;
   const styles = useMemo(() => getStyles(THEME), [THEME]);
+
+  
+  const scrollViewRef = React.useRef(null);
+  
+  useEffect(() => {
+    if (route.params?.action === 'googleLogin') {
+      if (!settings.googleConnected) {
+        setTimeout(() => promptAsync(), 500);
+      }
+      navigation.setParams({ action: null });
+    } else if (route.params?.action === 'scrollToAccount') {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 500);
+      navigation.setParams({ action: null });
+    }
+  }, [route.params?.action, settings.googleConnected]);
 
   const changeLanguage = (lang) => {
     i18n.changeLanguage(lang);
@@ -82,86 +99,50 @@ export default function SettingsScreen({ navigation }) {
         <Text style={styles.headerTitle}>{t("settings")}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("language")}</Text>
-          <TouchableOpacity
-            style={[styles.optionRow, i18n.language === "en" && styles.optionRowActive]}
-            onPress={() => changeLanguage("en")}
-          >
-            <Text style={[styles.optionText, i18n.language === "en" && styles.optionTextActive]}>English</Text>
-            {i18n.language === "en" && <Ionicons name="checkmark-circle" size={24} color={THEME.gold} />}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.optionRow, i18n.language === "ur" && styles.optionRowActive]}
-            onPress={() => changeLanguage("ur")}
-          >
-            <Text style={[styles.optionText, i18n.language === "ur" && styles.optionTextActive]}>اردو (Urdu)</Text>
-            {i18n.language === "ur" && <Ionicons name="checkmark-circle" size={24} color={THEME.gold} />}
-          </TouchableOpacity>
+          <View style={styles.scriptRow}>
+            <TouchableOpacity
+              style={[styles.scriptBtn, { paddingVertical: 15 }, i18n.language === "en" && styles.scriptBtnActive]}
+              onPress={() => changeLanguage("en")}
+            >
+              <Text style={[styles.scriptBtnText, i18n.language === "en" && styles.scriptBtnTextActive]}>English</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.scriptBtn, { paddingVertical: 15 }, i18n.language === "ur" && styles.scriptBtnActive]}
+              onPress={() => changeLanguage("ur")}
+            >
+              <Text style={[styles.scriptBtnText, i18n.language === "ur" && styles.scriptBtnTextActive]}>اردو (Urdu)</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("appearance")}</Text>
-          <TouchableOpacity
-            style={[styles.optionRow, settings.theme === "system" && styles.optionRowActive]}
-            onPress={() => updateSetting("theme", "system")}
-          >
-            <Text style={[styles.optionText, settings.theme === "system" && styles.optionTextActive]}>{t("system")}</Text>
-            {settings.theme === "system" && <Ionicons name="checkmark-circle" size={24} color={THEME.gold} />}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.optionRow, settings.theme === "light" && styles.optionRowActive]}
-            onPress={() => updateSetting("theme", "light")}
-          >
-            <Text style={[styles.optionText, settings.theme === "light" && styles.optionTextActive]}>{t("light")}</Text>
-            {settings.theme === "light" && <Ionicons name="checkmark-circle" size={24} color={THEME.gold} />}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.optionRow, settings.theme === "dark" && styles.optionRowActive]}
-            onPress={() => updateSetting("theme", "dark")}
-          >
-            <Text style={[styles.optionText, settings.theme === "dark" && styles.optionTextActive]}>{t("dark")}</Text>
-            {settings.theme === "dark" && <Ionicons name="checkmark-circle" size={24} color={THEME.gold} />}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("account_backup")}</Text>
-          <View style={styles.card}>
-            <TouchableOpacity 
-              style={[styles.toggleRow, { marginBottom: 15 }]} 
-              onPress={() => {
-                if (!settings.googleConnected) {
-                  promptAsync();
-                } else {
-                  updateSetting("googleConnected", false);
-                  updateSetting("googleAccessToken", null);
-                }
-              }}
+          <View style={styles.scriptRow}>
+            <TouchableOpacity
+              style={[styles.scriptBtn, { paddingVertical: 15 }, settings.theme === "system" && styles.scriptBtnActive]}
+              onPress={() => updateSetting("theme", "system")}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 }}>
-                <Ionicons name="logo-google" size={24} color={settings.googleConnected ? THEME.gold : THEME.textMuted} style={{ marginRight: 10 }} />
-                <Text style={[styles.optionText, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{t("google_sign_in")}</Text>
-              </View>
-              <Text style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 14, flexShrink: 0 }}>
-                {settings.googleConnected ? t("connected") : t("not_connected")}
-              </Text>
+              <Text style={[styles.scriptBtnText, settings.theme === "system" && styles.scriptBtnTextActive]}>{t("system")}</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.toggleRow, { opacity: settings.googleConnected ? 1 : 0.5 }]}
-              disabled={!settings.googleConnected}
-              onPress={() => handleSync(null, "backup")}
+            <TouchableOpacity
+              style={[styles.scriptBtn, { paddingVertical: 15 }, settings.theme === "light" && styles.scriptBtnActive]}
+              onPress={() => updateSetting("theme", "light")}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="cloud-upload-outline" size={24} color={THEME.text} style={{ marginRight: 10 }} />
-                <Text style={styles.optionText}>{t("sync_now")}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
+              <Text style={[styles.scriptBtnText, settings.theme === "light" && styles.scriptBtnTextActive]}>{t("light")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.scriptBtn, { paddingVertical: 15 }, settings.theme === "dark" && styles.scriptBtnActive]}
+              onPress={() => updateSetting("theme", "dark")}
+            >
+              <Text style={[styles.scriptBtnText, settings.theme === "dark" && styles.scriptBtnTextActive]}>{t("dark")}</Text>
             </TouchableOpacity>
           </View>
         </View>
+
+        
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("reading_preferences")}</Text>
@@ -258,6 +239,43 @@ export default function SettingsScreen({ navigation }) {
             >
               <Text style={[styles.scriptBtnText, settings.arabicScript === "indoPak" && styles.scriptBtnTextActive]} numberOfLines={1} adjustsFontSizeToFit>{t("indo_pak")}</Text>
               <Text style={{ color: THEME.text, fontSize: 22, marginTop: 10, textAlign: 'center' }}>بِسْمِ اللّٰهِ</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+      <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("account_backup")}</Text>
+          <View style={styles.card}>
+            <TouchableOpacity 
+              style={[styles.toggleRow, { marginBottom: 15 }]} 
+              onPress={() => {
+                if (!settings.googleConnected) {
+                  promptAsync();
+                } else {
+                  updateSetting("googleConnected", false);
+                  updateSetting("googleAccessToken", null);
+                }
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 }}>
+                <Ionicons name="logo-google" size={24} color={settings.googleConnected ? THEME.gold : THEME.textMuted} style={{ marginRight: 10 }} />
+                <Text style={[styles.optionText, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{t("google_sign_in")}</Text>
+              </View>
+              <Text style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 14, flexShrink: 0 }}>
+                {settings.googleConnected ? t("connected") : t("not_connected")}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.toggleRow, { opacity: settings.googleConnected ? 1 : 0.5 }]}
+              disabled={!settings.googleConnected}
+              onPress={() => handleSync(null, "backup")}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="cloud-upload-outline" size={24} color={THEME.text} style={{ marginRight: 10 }} />
+                <Text style={styles.optionText}>{t("sync_now")}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
