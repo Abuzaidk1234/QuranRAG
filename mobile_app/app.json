@@ -48,9 +48,7 @@
         "projectId": "0171cbf0-6861-431a-9455-3f44e9ec52ee"
       }
     },
-    "scheme": "com.rahnavard.app",
-    "plugins": [
-      "@react-native-google-signin/google-signin"
-    ]
+    "scheme": "com.googleusercontent.apps.167900378525-ks2a5g5p1fmdt9lpl8h37u7uhhheptfl",
+    "plugins": []
   }
 }
