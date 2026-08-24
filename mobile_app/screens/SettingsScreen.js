@@ -29,7 +29,7 @@ export default function SettingsScreen({ navigation }) {
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: '167900378525-chrk02499qs8af1d54069rmtqnk4r0fr.apps.googleusercontent.com',
-    androidClientId: '167900378525-chrk02499qs8af1d54069rmtqnk4r0fr.apps.googleusercontent.com',
+    androidClientId: '167900378525-ks2a5g5p1fmdt9lpl8h37u7uhhheptfl.apps.googleusercontent.com',
     expoClientId: '167900378525-chrk02499qs8af1d54069rmtqnk4r0fr.apps.googleusercontent.com',
     scopes: ['https://www.googleapis.com/auth/drive.appdata'],
   });
@@ -310,7 +310,7 @@ export default function SettingsScreen({ navigation }) {
                 numberOfLines={1} 
                 style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 14, flexShrink: 0 }}
               >
-                {settings.googleConnected ? "Connected" : "Not Connected"}
+                {settings.googleConnected ? t("connected") : t("not_connected")}
               </Text>
             </TouchableOpacity>
 

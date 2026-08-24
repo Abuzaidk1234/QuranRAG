@@ -233,10 +233,10 @@ const getStyles = (THEME) => StyleSheet.create({
   bookmarkTitle: { color: THEME.gold, fontSize: 16, fontWeight: "bold" },
   arabicText: {
     color: THEME.text,
-    fontSize: 28,
+    fontSize: settings?.arabicFontSize || 28,
     textAlign: "right",
     marginBottom: 15,
     lineHeight: 45,
   },
-  englishText: { color: THEME.text, fontSize: 16, lineHeight: 24 },
+  englishText: { color: THEME.text, fontSize: settings?.translationFontSize || 16, lineHeight: (settings?.translationFontSize || 16) * 1.5 },
 });

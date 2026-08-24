@@ -468,6 +468,8 @@
     "sync_now": "Sync Now",
     "notifications": "Notifications",
     "daily_reminder": "Daily Reminder",
-    "jumuah_reminder": "Jumu'ah Reminder"
+    "jumuah_reminder": "Jumu'ah Reminder",
+    "not_connected": "Not Connected",
+    "connected": "Connected"
   }
 }

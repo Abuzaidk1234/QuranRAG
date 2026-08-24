@@ -463,11 +463,13 @@
     "dark": "تاریک",
     "system": "سسٹم",
     "show_arabic": "عربی دکھائیں",
-    "account_backup": "Account & Backup",
-    "google_sign_in": "Google Sign-In",
-    "sync_now": "Sync Now",
-    "notifications": "Notifications",
-    "daily_reminder": "Daily Reminder",
-    "jumuah_reminder": "Jumu'ah Reminder"
+    "account_backup": "اکاؤنٹ اور بیک اپ",
+    "google_sign_in": "گوگل سائن ان",
+    "sync_now": "ابھی سنک کریں",
+    "notifications": "نوٹیفیکیشنز",
+    "daily_reminder": "روزانہ کی یاد دہانی",
+    "jumuah_reminder": "جمعہ کی یاد دہانی",
+    "not_connected": "منسلک نہیں ہے",
+    "connected": "منسلک ہے"
   }
 }

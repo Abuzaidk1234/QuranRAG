@@ -42,6 +42,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0171cbf0-6861-431a-9455-3f44e9ec52ee"
+      }
+    },
+    "scheme": "com.rahnavard.app"
   }
 }
