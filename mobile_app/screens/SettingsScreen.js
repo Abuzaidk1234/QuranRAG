@@ -93,9 +93,7 @@ export default function SettingsScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <View style={styles.floatingHeader}>
-        <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.menuButton}>
-          <Ionicons name="menu" size={28} color={THEME.text} />
-        </TouchableOpacity>
+
         <Text style={styles.headerTitle}>{t("settings")}</Text>
       </View>
 
