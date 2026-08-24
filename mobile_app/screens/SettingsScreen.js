@@ -21,10 +21,52 @@ export default function SettingsScreen({ navigation, route }) {
   
   const scrollViewRef = React.useRef(null);
   
-  useEffect(() => {
+  
+
+  const changeLanguage = (lang) => {
+    i18n.changeLanguage(lang);
+  };
+
+  
+
+  
+
+  React.useEffect(() => {
+    try {
+      GoogleSignin.configure({
+        scopes: ['https://www.googleapis.com/auth/drive.appdata'],
+        webClientId: '167900378525-chrk02499qs8af1d54069rmtqnk4r0fr.apps.googleusercontent.com', 
+      });
+    } catch(e) { console.log(e); }
+  }, []);
+
+  const handleGoogleLogin = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const tokens = await GoogleSignin.getTokens();
+      
+      updateSetting('googleConnected', true);
+      updateSetting('googleAccessToken', tokens.accessToken);
+      
+      Alert.alert(
+        "Connected!", 
+        "Your account is linked. Would you like to restore data from your Drive, or backup your current device to Drive?",
+        [
+          { text: "Restore from Drive", onPress: () => handleSync(tokens.accessToken, 'restore') },
+          { text: "Backup to Drive", onPress: () => handleSync(tokens.accessToken, 'backup') }
+        ]
+      );
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Login Failed", "Could not sign in to Google. Ensure your Google account is set up on this device.");
+    }
+  };
+
+  React.useEffect(() => {
     if (route.params?.action === 'googleLogin') {
-      if (!settings.googleConnected && request) {
-        promptAsync();
+      if (!settings.googleConnected) {
+        handleGoogleLogin();
         if (navigation.setParams) navigation.setParams({ action: null });
       }
     } else if (route.params?.action === 'scrollToAccount') {
@@ -33,39 +75,7 @@ export default function SettingsScreen({ navigation, route }) {
       }, 500);
       if (navigation.setParams) navigation.setParams({ action: null });
     }
-  }, [route.params?.action, settings.googleConnected, request]);
-
-  const changeLanguage = (lang) => {
-    i18n.changeLanguage(lang);
-  };
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: '167900378525-ks2a5g5p1fmdt9lpl8h37u7uhhheptfl.apps.googleusercontent.com',
-    webClientId: '167900378525-chrk02499qs8af1d54069rmtqnk4r0fr.apps.googleusercontent.com',
-    scopes: ['https://www.googleapis.com/auth/drive.appdata'],
-  });
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { authentication } = response;
-      if (authentication && authentication.accessToken) {
-        updateSetting('googleConnected', true);
-        updateSetting('googleAccessToken', authentication.accessToken);
-        
-        Alert.alert(
-          "Connected!", 
-          "Your account is linked. Would you like to restore data from your Drive, or backup your current device to Drive?",
-          [
-            { text: "Restore from Drive", onPress: () => handleSync(authentication.accessToken, 'restore') },
-            { text: "Backup to Drive", onPress: () => handleSync(authentication.accessToken, 'backup') }
-          ]
-        );
-      }
-    } else if (response?.type === 'error') {
-      console.log(response.error);
-      Alert.alert("Error", "Failed to connect to Google.");
-    }
-  }, [response]);
+  }, [route.params?.action, settings.googleConnected]);
 
   const handleSync = async (tokenOverride = null, mode = 'backup') => {
     const token = tokenOverride || settings.googleAccessToken;
