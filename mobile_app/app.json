@@ -49,6 +49,8 @@
       }
     },
     "scheme": "com.googleusercontent.apps.167900378525-ks2a5g5p1fmdt9lpl8h37u7uhhheptfl",
-    "plugins": []
+    "plugins": [
+      "@react-native-google-signin/google-signin"
+    ]
   }
 }

@@ -2,15 +2,15 @@ import React, { useMemo, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Switch } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Alert } from "react-native";
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { syncToDrive, syncFromDrive } from '../utils/GoogleDriveSync';
 import { Ionicons } from "@expo/vector-icons";
 import { SettingsContext } from "../utils/SettingsContext";
 import { useTranslation } from "react-i18next";
 import Slider from "@react-native-community/slider";
 
-WebBrowser.maybeCompleteAuthSession();
+
 
 export default function SettingsScreen({ navigation, route }) {
   const { themeColors, settings, updateSetting } = React.useContext(SettingsContext);
@@ -243,10 +243,11 @@ export default function SettingsScreen({ navigation, route }) {
           <View style={styles.card}>
             <TouchableOpacity 
               style={[styles.toggleRow, { marginBottom: 15 }]} 
-              onPress={() => {
+              onPress={async () => {
                 if (!settings.googleConnected) {
-                  promptAsync();
+                  handleGoogleLogin();
                 } else {
+                  try { await GoogleSignin.signOut(); } catch(e) {}
                   updateSetting("googleConnected", false);
                   updateSetting("googleAccessToken", null);
                 }
