@@ -123,7 +123,7 @@ const ChatProvider = ({ children }) => {
 
 // --- Custom Sidebar (Drawer) ---
 function CustomDrawerContent(props) {
-  const { themeColors } = React.useContext(SettingsContext);
+  const { settings, themeColors } = React.useContext(SettingsContext);
   const THEME = themeColors;
   const styles = React.useMemo(() => getStyles(THEME), [THEME]);
   const { t } = useTranslation();
@@ -309,7 +309,7 @@ function CustomDrawerContent(props) {
 
 // --- Placeholder Screen for Routing ---
 function PlaceholderScreen({ route, navigation }) {
-  const { themeColors } = React.useContext(SettingsContext);
+  const { settings, themeColors } = React.useContext(SettingsContext);
   const THEME = themeColors;
   const styles = React.useMemo(() => getStyles(THEME), [THEME]);
   return (
@@ -398,7 +398,7 @@ const SearchInputBar = ({
   isLoading,
   t,
 }) => {
-  const { themeColors } = React.useContext(SettingsContext);
+  const { settings, themeColors } = React.useContext(SettingsContext);
   const THEME = themeColors;
   const styles = React.useMemo(() => getStyles(THEME), [THEME]);
   return (
@@ -550,7 +550,7 @@ const SearchInputBar = ({
 
 // --- Main Chat Screen ---
 function HomeScreen({ navigation }) {
-  const { themeColors } = React.useContext(SettingsContext);
+  const { settings, themeColors } = React.useContext(SettingsContext);
   const THEME = themeColors;
   const styles = React.useMemo(() => getStyles(THEME), [THEME]);
   const { t, i18n } = useTranslation();
@@ -1042,7 +1042,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 const Stack = createNativeStackNavigator();
 
 function DrawerNavigator() {
-  const { themeColors } = React.useContext(SettingsContext);
+  const { settings, themeColors } = React.useContext(SettingsContext);
   const THEME = themeColors;
   return (
     <Drawer.Navigator

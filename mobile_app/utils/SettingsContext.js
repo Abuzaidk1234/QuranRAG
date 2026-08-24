@@ -40,7 +40,11 @@ export const SettingsProvider = ({ children }) => {
     showTranslation: true,
     showArabic: true,
     arabicScript: "uthmani",
-    theme: "system", // default to system
+    theme: "system",
+    dailyReminder: false,
+    jumuahReminder: false,
+    googleConnected: false,
+    googleAccessToken: null,
   });
 
   useEffect(() => {

@@ -462,6 +462,12 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System",
-    "show_arabic": "Show Arabic"
+    "show_arabic": "Show Arabic",
+    "account_backup": "Account & Backup",
+    "google_sign_in": "Google Sign-In",
+    "sync_now": "Sync Now",
+    "notifications": "Notifications",
+    "daily_reminder": "Daily Reminder",
+    "jumuah_reminder": "Jumu'ah Reminder"
   }
 }

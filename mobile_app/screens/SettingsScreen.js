@@ -9,6 +9,12 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Alert } from "react-native";
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import { syncToDrive, syncFromDrive } from '../utils/GoogleDriveSync';
+
+WebBrowser.maybeCompleteAuthSession();
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,6 +26,103 @@ export default function SettingsScreen({ navigation }) {
   const { settings, updateSetting, themeColors } = useContext(SettingsContext);
   const THEME = themeColors;
   const styles = useMemo(() => getStyles(THEME), [THEME]);
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: '167900378525-chrk02499qs8af1d54069rmtqnk4r0fr.apps.googleusercontent.com',
+    androidClientId: '167900378525-chrk02499qs8af1d54069rmtqnk4r0fr.apps.googleusercontent.com',
+    expoClientId: '167900378525-chrk02499qs8af1d54069rmtqnk4r0fr.apps.googleusercontent.com',
+    scopes: ['https://www.googleapis.com/auth/drive.appdata'],
+  });
+
+  React.useEffect(() => {
+    if (response?.type === 'success') {
+      const { authentication } = response;
+      updateSetting('googleConnected', true);
+      updateSetting('googleAccessToken', authentication.accessToken);
+      
+      Alert.alert(
+        "Connected!", 
+        "Your account is linked. Would you like to restore data from your Drive, or backup your current device to Drive?",
+        [
+          { 
+            text: "Restore from Drive", 
+            onPress: () => handleSync(authentication.accessToken, 'restore') 
+          },
+          { 
+            text: "Backup to Drive", 
+            onPress: () => handleSync(authentication.accessToken, 'backup') 
+          }
+        ]
+      );
+    }
+  }, [response]);
+
+  const handleSync = async (tokenOverride = null, mode = 'backup') => {
+    const token = tokenOverride || settings.googleAccessToken;
+    if (!token) return;
+    
+    try {
+      if (mode === 'backup') {
+        await syncToDrive(token);
+        Alert.alert("Success", "Data successfully backed up to Google Drive!");
+      } else {
+        const hasBackup = await syncFromDrive(token);
+        if (hasBackup) {
+          Alert.alert("Success", "Data restored! Please restart the app to see all changes.");
+        } else {
+          Alert.alert("Notice", "No existing backup found in your Google Drive.");
+        }
+      }
+    } catch (e) {
+      console.log(e);
+      Alert.alert("Sync Error", "Authentication expired. Please reconnect your Google account.");
+      updateSetting('googleConnected', false);
+    }
+  };
+
+
+  const handleDailyReminderToggle = async (val) => {
+    if (val) {
+      const hasPerm = await requestNotificationPermission();
+      if (!hasPerm) {
+        alert("Notification permissions are required.");
+        return;
+      }
+      const hasLoc = await requestLocationPermission();
+      if (!hasLoc) {
+        alert("Location permissions are required to calculate prayer times.");
+        return;
+      }
+      
+      try {
+        let location = await Location.getCurrentPositionAsync({});
+        await scheduleDailyReminders(location.coords.latitude, location.coords.longitude);
+        updateSetting("dailyReminder", true);
+        alert("Daily reminders scheduled for the next 7 days!");
+      } catch (e) {
+        alert("Could not get location. Please try again.");
+      }
+    } else {
+      await cancelDailyReminders();
+      updateSetting("dailyReminder", false);
+    }
+  };
+
+  const handleJumuahReminderToggle = async (val) => {
+    if (val) {
+      const hasPerm = await requestNotificationPermission();
+      if (!hasPerm) {
+        alert("Notification permissions are required.");
+        return;
+      }
+      await scheduleJumuahReminder();
+      updateSetting("jumuahReminder", true);
+      alert("Jumu'ah reminder scheduled!");
+    } else {
+      await cancelJumuahReminder();
+      updateSetting("jumuahReminder", false);
+    }
+  };
 
   const changeLanguage = (lang) => {
     i18n.changeLanguage(lang);
@@ -185,6 +288,42 @@ export default function SettingsScreen({ navigation }) {
               onPress={() => updateSetting("theme", "system")}
             >
               <Text style={[styles.scriptBtnText, settings.theme === "system" && styles.scriptBtnTextActive]} numberOfLines={1} adjustsFontSizeToFit>{t("system")}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+      
+        {/* Account & Backup */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("account_backup")}</Text>
+          
+          <View style={styles.card}>
+            <TouchableOpacity 
+              style={[styles.toggleRow, { marginBottom: 15 }]}
+              onPress={() => { if (!settings.googleConnected) { promptAsync(); } else { updateSetting("googleConnected", false); updateSetting("googleAccessToken", null); } }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 }}>
+                <Ionicons name="logo-google" size={24} color={settings.googleConnected ? THEME.gold : THEME.textMuted} style={{ marginRight: 10 }} />
+                <Text style={[styles.optionText, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{t("google_sign_in")}</Text>
+              </View>
+              <Text 
+                numberOfLines={1} 
+                style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 14, flexShrink: 0 }}
+              >
+                {settings.googleConnected ? "Connected" : "Not Connected"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.toggleRow, { opacity: settings.googleConnected ? 1 : 0.5 }]}
+              disabled={!settings.googleConnected}
+              onPress={() => handleSync(null, "backup")}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="cloud-upload-outline" size={24} color={THEME.text} style={{ marginRight: 10 }} />
+                <Text style={styles.optionText}>{t("sync_now")}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
