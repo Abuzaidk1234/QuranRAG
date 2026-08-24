@@ -1,4 +1,13 @@
 import os
+
+# Limit CPU threads to prevent deadlock/thrashing on Render Free Tier
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["ONNXRUNTIME_MAX_THREADS"] = "1"
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -98,7 +107,7 @@ async def startup_event():
     print("Loading FastEmbed Embeddings (ONNX)...")
     try:
         from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
-        embeddings = FastEmbedEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        embeddings = FastEmbedEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2", threads=1)
     except Exception as e:
         print(f"WARNING: FastEmbed failed to load: {e}")
     
