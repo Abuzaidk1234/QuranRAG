@@ -1366,12 +1366,9 @@ export default function QuranScreen({ navigation }) {
         )}
       </View>
 
-      <LinearGradient
-        colors={[`rgba(${THEME.bgRgb}, 1)`, `rgba(${THEME.bgRgb}, 0.9)`, `rgba(${THEME.bgRgb}, 0)`]}
-        locations={[0, 0.7, 1]}
-        style={styles.floatingHeader}
-      >
-        {selectedSurah ? (
+      {selectedItem ? (
+        <View style={[styles.floatingHeader, { backgroundColor: THEME.bg, paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 15 }]}>
+          {selectedSurah ? (
           <View style={{ width: "100%", position: "relative" }}>
             <View
               style={[styles.headerRow, { justifyContent: "space-between" }]}
@@ -1515,7 +1512,159 @@ export default function QuranScreen({ navigation }) {
             </View>
           </View>
         )}
-      </LinearGradient>
+        </View>
+      ) : (
+        <LinearGradient
+          colors={[`rgba(${THEME.bgRgb}, 1)`, `rgba(${THEME.bgRgb}, 0.9)`, `rgba(${THEME.bgRgb}, 0)`]}
+          locations={[0, 0.7, 1]}
+          style={styles.floatingHeader}
+        >
+          {selectedSurah ? (
+          <View style={{ width: "100%", position: "relative" }}>
+            <View
+              style={[styles.headerRow, { justifyContent: "space-between" }]}
+            >
+              <TouchableOpacity onPress={goBack} style={styles.headerBtn}>
+                <Ionicons name="chevron-back" size={28} color={THEME.text} />
+                <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
+                  Surahs
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Settings")}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: "rgba(255,255,255,0.15)",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginRight: 10
+                }}
+              >
+                <Ionicons name="settings-sharp" size={20} color={THEME.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: TAB_WIDTH,
+                width: TAB_WIDTH,
+                height: 44,
+                backgroundColor: THEME.gold,
+                zIndex: 0,
+              }}
+            />
+
+            <ScrollView
+              ref={surahTabBarRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                alignItems: "center",
+                height: 44,
+              }}
+              style={styles.surahNavRow}
+            >
+              {memoizedSurahTabs}
+            </ScrollView>
+          </View>
+        ) : juzData ? (
+          <View style={{ width: "100%", position: "relative" }}>
+            <View
+              style={[styles.headerRow, { justifyContent: "space-between" }]}
+            >
+              <TouchableOpacity onPress={goBack} style={styles.headerBtn}>
+                <Ionicons name="chevron-back" size={28} color={THEME.text} />
+                <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
+                  Juzs
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Settings")}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: "rgba(255,255,255,0.15)",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginRight: 10
+                }}
+              >
+                <Ionicons name="settings-sharp" size={20} color={THEME.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: TAB_WIDTH,
+                width: TAB_WIDTH,
+                height: 44,
+                backgroundColor: THEME.gold,
+                zIndex: 0,
+              }}
+            />
+
+            <ScrollView
+              ref={juzTabBarRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                alignItems: "center",
+                height: 44,
+              }}
+              style={styles.surahNavRow}
+            >
+              {memoizedJuzTabs}
+            </ScrollView>
+          </View>
+        ) : (
+          <View style={[styles.headerRow, { justifyContent: "space-between", width: "100%" }]}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <TouchableOpacity
+                onPress={() => {
+                  Keyboard.dismiss();
+                  navigation.openDrawer();
+                }}
+                style={{
+                  width: 40,
+                  height: 40,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#0c4452',
+                borderWidth: 0.5,
+                borderColor: 'rgba(146, 105, 17, 100)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Image
+                  source={require('../assets/custom_menu.png')}
+                  style={{ width: 36, height: 36 }}
+                  resizeMode='contain'
+                />
+              </View>
+
+              </TouchableOpacity>
+              <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
+                {t("read_quran")}
+              </Text>
+            </View>
+          </View>
+        )}
+        </LinearGradient>
+      )}
     </SafeAreaView>
   );
 }

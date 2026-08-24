@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Switch } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { Alert } from "react-native";
 
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -102,10 +103,13 @@ export default function SettingsScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      <View style={styles.floatingHeader}>
-
+      <LinearGradient
+        colors={[`rgba(${THEME.bgRgb}, 1)`, `rgba(${THEME.bgRgb}, 0.9)`, `rgba(${THEME.bgRgb}, 0)`]}
+        locations={[0, 0.7, 1]}
+        style={styles.floatingHeader}
+      >
         <Text style={styles.headerTitle}>{t("settings")}</Text>
-      </View>
+      </LinearGradient>
 
       <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content}>
         <View style={styles.section}>

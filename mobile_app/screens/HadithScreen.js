@@ -598,16 +598,9 @@ export default function HadithScreen({ navigation }) {
       </View>
 
       {/* Floating Header */}
-      <LinearGradient
-        colors={[
-          `rgba(${THEME.bgRgb}, 1)`,
-          `rgba(${THEME.bgRgb}, 0.9)`,
-          `rgba(${THEME.bgRgb}, 0)`,
-        ]}
-        locations={[0, 0.6, 1]}
-        style={styles.floatingHeader}
-      >
-        {selectedBook ? (
+      {selectedChapter ? (
+        <View style={[styles.floatingHeader, { backgroundColor: THEME.bg, paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 15 }]}>
+          {selectedBook ? (
           <View style={[styles.headerRow, { justifyContent: "space-between" }]}>
             <TouchableOpacity onPress={goBack} style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
               <Ionicons name="arrow-back" size={28} color={THEME.text} />
@@ -682,7 +675,90 @@ export default function HadithScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+        </View>
+      ) : (
+        <LinearGradient
+          colors={[`rgba(${THEME.bgRgb}, 1)`, `rgba(${THEME.bgRgb}, 0.9)`, `rgba(${THEME.bgRgb}, 0)`]}
+          locations={[0, 0.7, 1]}
+          style={styles.floatingHeader}
+        >
+          {selectedBook ? (
+          <View style={[styles.headerRow, { justifyContent: "space-between" }]}>
+            <TouchableOpacity onPress={goBack} style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+              <Ionicons name="arrow-back" size={28} color={THEME.text} />
+              <Text
+                style={[
+                  styles.headerTitle,
+                  {
+                    textAlign: "left",
+                    fontSize: i18n.language === "ur" ? 17 : 16,
+                    lineHeight: 22,
+                  },
+                ]}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+              >
+                {searchedHadith
+                  ? t("hadith_number", { number: searchedHadith.idInBook })
+                  : selectedChapter
+                    ? i18n.language === "ur"
+                      ? selectedChapter.arabic || t(selectedChapter.english)
+                      : selectedChapter.english
+                    : t(selectedBook.id)}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Settings")}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: "rgba(255,255,255,0.15)",
+                justifyContent: "center",
+                alignItems: "center",
+                marginRight: 10
+              }}
+            >
+              <Ionicons name="settings-sharp" size={20} color={THEME.text} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={[styles.headerRow, { justifyContent: "space-between", width: "100%" }]}>
+            <TouchableOpacity
+              onPress={() => {
+                Keyboard.dismiss();
+                navigation.openDrawer();
+              }}
+              style={{
+                width: 40,
+                height: 40,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#0c4452',
+                borderWidth: 0.5,
+                borderColor: 'rgba(146, 105, 17, 100)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+                <Image
+                  source={require('../assets/custom_menu.png')}
+                  style={{ width: 36, height: 36 }}
+                  resizeMode='contain'
+                />
+              </View>
+
+            </TouchableOpacity>
+          </View>
+        )}
+        </LinearGradient>
+      )}
     </SafeAreaView>
   );
 }
