@@ -23,17 +23,17 @@ export default function SettingsScreen({ navigation, route }) {
   
   useEffect(() => {
     if (route.params?.action === 'googleLogin') {
-      if (!settings.googleConnected) {
-        setTimeout(() => promptAsync(), 500);
+      if (!settings.googleConnected && request) {
+        promptAsync();
+        if (navigation.setParams) navigation.setParams({ action: null });
       }
-      navigation.setParams({ action: null });
     } else if (route.params?.action === 'scrollToAccount') {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 500);
-      navigation.setParams({ action: null });
+      if (navigation.setParams) navigation.setParams({ action: null });
     }
-  }, [route.params?.action, settings.googleConnected]);
+  }, [route.params?.action, settings.googleConnected, request]);
 
   const changeLanguage = (lang) => {
     i18n.changeLanguage(lang);
@@ -107,13 +107,13 @@ export default function SettingsScreen({ navigation, route }) {
               style={[styles.scriptBtn, { paddingVertical: 15 }, i18n.language === "en" && styles.scriptBtnActive]}
               onPress={() => changeLanguage("en")}
             >
-              <Text style={[styles.scriptBtnText, i18n.language === "en" && styles.scriptBtnTextActive]}>English</Text>
+              <Text style={[styles.scriptBtnText, i18n.language === "en" && styles.scriptBtnTextActive]} numberOfLines={1} adjustsFontSizeToFit>English</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.scriptBtn, { paddingVertical: 15 }, i18n.language === "ur" && styles.scriptBtnActive]}
               onPress={() => changeLanguage("ur")}
             >
-              <Text style={[styles.scriptBtnText, i18n.language === "ur" && styles.scriptBtnTextActive]}>اردو (Urdu)</Text>
+              <Text style={[styles.scriptBtnText, i18n.language === "ur" && styles.scriptBtnTextActive]} numberOfLines={1} adjustsFontSizeToFit>اردو (Urdu)</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -125,19 +125,19 @@ export default function SettingsScreen({ navigation, route }) {
               style={[styles.scriptBtn, { paddingVertical: 15 }, settings.theme === "system" && styles.scriptBtnActive]}
               onPress={() => updateSetting("theme", "system")}
             >
-              <Text style={[styles.scriptBtnText, settings.theme === "system" && styles.scriptBtnTextActive]}>{t("system")}</Text>
+              <Text style={[styles.scriptBtnText, settings.theme === "system" && styles.scriptBtnTextActive]} numberOfLines={1} adjustsFontSizeToFit>{t("system")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.scriptBtn, { paddingVertical: 15 }, settings.theme === "light" && styles.scriptBtnActive]}
               onPress={() => updateSetting("theme", "light")}
             >
-              <Text style={[styles.scriptBtnText, settings.theme === "light" && styles.scriptBtnTextActive]}>{t("light")}</Text>
+              <Text style={[styles.scriptBtnText, settings.theme === "light" && styles.scriptBtnTextActive]} numberOfLines={1} adjustsFontSizeToFit>{t("light")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.scriptBtn, { paddingVertical: 15 }, settings.theme === "dark" && styles.scriptBtnActive]}
               onPress={() => updateSetting("theme", "dark")}
             >
-              <Text style={[styles.scriptBtnText, settings.theme === "dark" && styles.scriptBtnTextActive]}>{t("dark")}</Text>
+              <Text style={[styles.scriptBtnText, settings.theme === "dark" && styles.scriptBtnTextActive]} numberOfLines={1} adjustsFontSizeToFit>{t("dark")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -146,7 +146,7 @@ export default function SettingsScreen({ navigation, route }) {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("reading_preferences")}</Text>
-          
+
           <View style={styles.card}>
             <View style={styles.toggleRow}>
               <Text style={styles.optionText}>{t("show_arabic")}</Text>
@@ -157,20 +157,7 @@ export default function SettingsScreen({ navigation, route }) {
                 thumbColor={"#f4f3f4"}
               />
             </View>
-            <View style={[styles.toggleRow, { marginTop: 15 }]}>
-              <Text style={styles.optionText}>{t("show_translation")}</Text>
-              <Switch
-                value={settings.showTranslation}
-                onValueChange={(val) => updateSetting("showTranslation", val)}
-                trackColor={{ false: "#767577", true: THEME.gold }}
-                thumbColor={"#f4f3f4"}
-              />
-            </View>
-          </View>
-
-          <Text style={[styles.optionText, { marginTop: 15, marginBottom: 10 }]}>{t("arabic_font_size")}</Text>
-          <View style={styles.card}>
-            <View style={styles.sliderHeader}>
+            <View style={[styles.sliderHeader, { marginTop: 20 }]}>
               <Text style={{ color: THEME.textMuted }}>18px</Text>
               <Text style={styles.sliderValue}>{settings.arabicFontSize}px</Text>
               <Text style={{ color: THEME.textMuted }}>50px</Text>
@@ -195,9 +182,17 @@ export default function SettingsScreen({ navigation, route }) {
             )}
           </View>
 
-          <Text style={[styles.optionText, { marginTop: 15, marginBottom: 10 }]}>{t("translation_font_size")}</Text>
-          <View style={styles.card}>
-            <View style={styles.sliderHeader}>
+          <View style={[styles.card, { marginTop: 15 }]}>
+            <View style={styles.toggleRow}>
+              <Text style={styles.optionText}>{t("show_translation")}</Text>
+              <Switch
+                value={settings.showTranslation}
+                onValueChange={(val) => updateSetting("showTranslation", val)}
+                trackColor={{ false: "#767577", true: THEME.gold }}
+                thumbColor={"#f4f3f4"}
+              />
+            </View>
+            <View style={[styles.sliderHeader, { marginTop: 20 }]}>
               <Text style={{ color: THEME.textMuted }}>12px</Text>
               <Text style={styles.sliderValue}>{settings.translationFontSize}px</Text>
               <Text style={{ color: THEME.textMuted }}>30px</Text>
@@ -307,8 +302,8 @@ const getStyles = (THEME) => StyleSheet.create({
   previewBox: { marginTop: 15, padding: 15, backgroundColor: "rgba(0,0,0,0.15)", borderRadius: 8, alignItems: "center", minHeight: 60, justifyContent: "center" },
   toggleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   scriptRow: { flexDirection: "row", gap: 10 },
-  scriptBtn: { flex: 1, backgroundColor: THEME.surface, padding: 8, borderRadius: 12, alignItems: "center" },
+  scriptBtn: { flex: 1, backgroundColor: THEME.surface, paddingVertical: 8, paddingHorizontal: 2, borderRadius: 12, alignItems: "center" },
   scriptBtnActive: { borderColor: THEME.gold, borderWidth: 1 },
-  scriptBtnText: { color: THEME.text, fontSize: 14 },
+  scriptBtnText: { color: THEME.text, fontSize: 14, textAlign: 'center' },
   scriptBtnTextActive: { color: THEME.gold, fontWeight: "bold" },
 });
