@@ -21,6 +21,7 @@ import {
   Platform,
   Modal,
   Dimensions,
+  Animated,
 } from "react-native";
 
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -559,6 +560,42 @@ const SearchInputBar = ({
 };
 
 // --- Main Chat Screen ---
+
+const ThinkingBubble = ({ THEME, styles }) => {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animateDot = (dot, delay) => {
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(dot, { toValue: -5, duration: 300, useNativeDriver: true }),
+            Animated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
+            Animated.delay(400)
+          ])
+        )
+      ]).start();
+    };
+    
+    animateDot(dot1, 0);
+    animateDot(dot2, 150);
+    animateDot(dot3, 300);
+  }, []);
+
+  return (
+    <View style={styles.aiContainer}>
+      <View style={{ backgroundColor: THEME.aiBubble, width: 60, height: 38, borderRadius: 19, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 10 }}>
+        <Animated.View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.text, marginHorizontal: 3, transform: [{ translateY: dot1 }] }} />
+        <Animated.View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.text, marginHorizontal: 3, transform: [{ translateY: dot2 }] }} />
+        <Animated.View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: THEME.text, marginHorizontal: 3, transform: [{ translateY: dot3 }] }} />
+      </View>
+    </View>
+  );
+};
+
 function HomeScreen({ navigation }) {
   const { settings, themeColors } = React.useContext(SettingsContext);
   const THEME = themeColors;
@@ -904,12 +941,7 @@ function HomeScreen({ navigation }) {
                 );
               }
             })}
-            {isLoading && (
-              <ActivityIndicator
-                color={THEME.text}
-                style={{ marginVertical: 20 }}
-              />
-            )}
+            {isLoading && <ThinkingBubble THEME={THEME} styles={styles} />}
           </ScrollView>
 
           {/* Floating Top Header */}
