@@ -159,12 +159,17 @@ async def chat(request: ChatRequest):
     try:
         llm = get_llm(request.provider)
         
+        from qdrant_client.http import models as rest
         # Apply context filter dynamically
         search_kwargs = {"k": 6}
         if request.filter.lower() == "quran":
-            search_kwargs["filter"] = {"source": "Quran"}
+            search_kwargs["filter"] = rest.Filter(
+                must=[rest.FieldCondition(key="metadata.source", match=rest.MatchValue(value="Quran"))]
+            )
         elif request.filter.lower() == "hadith":
-            search_kwargs["filter"] = {"source": "Hadith"}
+            search_kwargs["filter"] = rest.Filter(
+                must=[rest.FieldCondition(key="metadata.source", match=rest.MatchValue(value="Hadith"))]
+            )
             
         temp_retriever = qdrant_store.as_retriever(search_kwargs=search_kwargs)
         
