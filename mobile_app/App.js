@@ -325,8 +325,14 @@ function CustomDrawerContent(props) {
               }
             }}
           >
-            <Ionicons name="person-circle" size={32} color={THEME.text} />
-            <Text style={styles.drawerTitle}>{settings.googleConnected ? t("connected") : t("guest_user")}</Text>
+            {settings.googleConnected ? (
+              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: getBadgeColor(settings.googleUserName || "User"), justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{getInitials(settings.googleUserName || "User")}</Text>
+              </View>
+            ) : (
+              <Ionicons name="person-circle" size={32} color={THEME.text} />
+            )}
+            <Text style={[styles.drawerTitle, { marginLeft: 10, fontSize: 18 }]} numberOfLines={1} adjustsFontSizeToFit>{settings.googleConnected ? (settings.googleUserName || "User") : t("guest_user")}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => props.navigation.navigate("Settings")}>
             <Ionicons name="settings-sharp" size={24} color={THEME.text} />

@@ -271,7 +271,7 @@ export default function SettingsScreen({ navigation, route }) {
                 <Ionicons name="logo-google" size={24} color={settings.googleConnected ? THEME.gold : THEME.textMuted} style={{ marginRight: 10 }} />
                 <Text style={[styles.optionText, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{t("google_sign_in")}</Text>
               </View>
-              <Text style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 14, flexShrink: 0 }}>
+              <Text style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 14, flexShrink: 1, paddingLeft: 10 }}>
                 {settings.googleConnected ? t("connected") : t("not_connected")}
               </Text>
             </TouchableOpacity>
@@ -283,9 +283,9 @@ export default function SettingsScreen({ navigation, route }) {
                   style={[styles.toggleRow, { marginBottom: 15 }]}
                   onPress={() => handleSync(null, "backup")}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 }}>
                     <Ionicons name="cloud-upload-outline" size={24} color={THEME.text} style={{ marginRight: 10 }} />
-                    <Text style={styles.optionText}>Backup to Drive</Text>
+                    <Text style={[styles.optionText, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>Backup to Drive</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
                 </TouchableOpacity>
@@ -294,9 +294,9 @@ export default function SettingsScreen({ navigation, route }) {
                   style={styles.toggleRow}
                   onPress={() => handleSync(null, "restore")}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 }}>
                     <Ionicons name="cloud-download-outline" size={24} color={THEME.text} style={{ marginRight: 10 }} />
-                    <Text style={styles.optionText}>Restore from Drive</Text>
+                    <Text style={[styles.optionText, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>Restore from Drive</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
                 </TouchableOpacity>
