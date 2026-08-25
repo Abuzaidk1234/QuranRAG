@@ -79,8 +79,26 @@ export default function SettingsScreen({ navigation, route }) {
   }, [route.params?.action, settings.googleConnected]);
 
   const handleSync = async (tokenOverride = null, mode = 'backup') => {
-    const token = tokenOverride || settings.googleAccessToken;
-    if (!token) return;
+    let token = tokenOverride || settings.googleAccessToken;
+    if (!tokenOverride) {
+      try {
+        const tokens = await GoogleSignin.getTokens();
+        token = tokens.accessToken;
+        updateSetting('googleAccessToken', token);
+      } catch (e) {
+        try {
+          await GoogleSignin.signInSilently();
+          const tokens = await GoogleSignin.getTokens();
+          token = tokens.accessToken;
+          updateSetting('googleAccessToken', token);
+        } catch (err) {
+          console.log(err);
+          Alert.alert("Sync Error", "Authentication expired. Please reconnect your Google account.");
+          updateSetting('googleConnected', false);
+          return;
+        }
+      }
+    }
     
     try {
       if (mode === 'backup') {
