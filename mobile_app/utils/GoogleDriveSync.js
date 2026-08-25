@@ -23,12 +23,12 @@ export const syncToDrive = async (accessToken) => {
   // 1. Gather all local data
   const bookmarks = await AsyncStorage.getItem('bookmarks');
   const app_settings = await AsyncStorage.getItem('app_settings');
-  const chat_history = await AsyncStorage.getItem('chat_history');
+  const chat_history = await AsyncStorage.getItem('chat_sessions_v2');
   
   const backupData = {
     bookmarks: bookmarks ? JSON.parse(bookmarks) : [],
     app_settings: app_settings ? JSON.parse(app_settings) : {},
-    chat_history: chat_history ? JSON.parse(chat_history) : [],
+    chat_sessions_v2: chat_history ? JSON.parse(chat_history) : [],
     timestamp: new Date().toISOString()
   };
 
