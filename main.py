@@ -169,7 +169,7 @@ async def chat(request: ChatRequest):
         temp_retriever = qdrant_store.as_retriever(search_kwargs=search_kwargs)
         
                 # 1. Query Expansion & History Awareness
-                fast_llm = llm
+        fast_llm = llm
         history_aware_retriever = create_history_aware_retriever(
             fast_llm, temp_retriever, contextualize_q_prompt
         )
