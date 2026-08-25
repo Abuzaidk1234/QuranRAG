@@ -1366,7 +1366,7 @@ export default function QuranScreen({ navigation }) {
         )}
       </View>
 
-      {selectedItem ? (
+      {(selectedSurah || juzData) ? (
         <View style={[styles.floatingHeader, { backgroundColor: THEME.bg, paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 15 }]}>
           {selectedSurah ? (
           <View style={{ width: "100%", position: "relative" }}>

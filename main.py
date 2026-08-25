@@ -129,7 +129,7 @@ async def startup_event():
     print("Initializing LLMs...")
     groq_api_key = os.getenv("GROQ_API_KEY")
     if groq_api_key:
-        llm_groq = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant", api_key=groq_api_key)
+        llm_groq = ChatGroq(temperature=0, model_name="qwen/qwen3.6-27b", api_key=groq_api_key)
         
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     if gemini_api_key:
@@ -169,10 +169,7 @@ async def chat(request: ChatRequest):
         temp_retriever = qdrant_store.as_retriever(search_kwargs=search_kwargs)
         
                 # 1. Query Expansion & History Awareness
-        try:
-            fast_llm = ChatGroq(model_name='llama-3.1-8b-instant', groq_api_key=os.getenv('GROQ_API_KEY'), temperature=0)
-        except Exception:
-            fast_llm = llm
+                fast_llm = llm
         history_aware_retriever = create_history_aware_retriever(
             fast_llm, temp_retriever, contextualize_q_prompt
         )
