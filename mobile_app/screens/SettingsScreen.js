@@ -49,6 +49,9 @@ export default function SettingsScreen({ navigation, route }) {
       
       updateSetting('googleConnected', true);
       updateSetting('googleAccessToken', tokens.accessToken);
+      if (userInfo && userInfo.user && userInfo.user.name) {
+        updateSetting('googleUserName', userInfo.user.name);
+      }
       
       Alert.alert(
         "Connected!", 
@@ -65,6 +68,19 @@ export default function SettingsScreen({ navigation, route }) {
   };
 
   React.useEffect(() => {
+    if (settings.googleConnected && !settings.googleUserName) {
+      const fetchName = async () => {
+        try {
+          const userInfo = await GoogleSignin.signInSilently();
+          if (userInfo && userInfo.user && userInfo.user.name) {
+            updateSetting('googleUserName', userInfo.user.name);
+          }
+        } catch (e) {
+          console.log("Could not fetch silent user info", e);
+        }
+      };
+      fetchName();
+    }
     if (route.params?.action === 'googleLogin') {
       if (!settings.googleConnected) {
         handleGoogleLogin();
@@ -282,6 +298,7 @@ export default function SettingsScreen({ navigation, route }) {
                   try { await GoogleSignin.signOut(); } catch(e) {}
                   updateSetting("googleConnected", false);
                   updateSetting("googleAccessToken", null);
+                  updateSetting("googleUserName", null);
                 }
               }}
             >
@@ -289,9 +306,9 @@ export default function SettingsScreen({ navigation, route }) {
                 <Ionicons name="logo-google" size={24} color={settings.googleConnected ? THEME.gold : THEME.textMuted} style={{ marginRight: 10 }} />
                 <Text style={[styles.optionText, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{t("google_sign_in")}</Text>
               </View>
-              <Text style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 14, flexShrink: 1, paddingLeft: 10 }}>
-                {settings.googleConnected ? t("connected") : t("not_connected")}
-              </Text>
+              <Text style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 14, flexShrink: 1, paddingLeft: 10, textAlign: 'right' }} numberOfLines={1} adjustsFontSizeToFit>
+                  {settings.googleConnected ? t("connected") : t("not_connected")}
+                </Text>
             </TouchableOpacity>
 
             {settings.googleConnected && (

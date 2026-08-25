@@ -96,7 +96,7 @@ export const syncFromDrive = async (accessToken) => {
   // Save the downloaded data to local storage
   if (data.bookmarks) await AsyncStorage.setItem('bookmarks', JSON.stringify(data.bookmarks));
   if (data.app_settings) await AsyncStorage.setItem('app_settings', JSON.stringify(data.app_settings));
-  if (data.chat_history) await AsyncStorage.setItem('chat_history', JSON.stringify(data.chat_history));
+  if (data.chat_sessions_v2) await AsyncStorage.setItem('chat_sessions_v2', JSON.stringify(data.chat_sessions_v2));
 
   return true;
 };
