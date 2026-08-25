@@ -125,6 +125,25 @@ const ChatProvider = ({ children }) => {
 // --- Custom Sidebar (Drawer) ---
 function CustomDrawerContent(props) {
   const { settings, themeColors } = React.useContext(SettingsContext);
+  
+  const getInitials = (name) => {
+    if (!name) return "G";
+    const parts = name.split(" ");
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const getBadgeColor = (name) => {
+    if (!name) return themeColors.surface;
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colors = ["#e57373", "#f06292", "#ba68c8", "#9575cd", "#7986cb", "#64b5f6", "#4fc3f7", "#4dd0e1", "#4db6ac", "#81c784", "#aed581", "#ff8a65", "#d4e157", "#ffd54f", "#ffb74d", "#a1887f"];
+    const index = Math.abs(hash % colors.length);
+    return colors[index];
+  };
+
   const THEME = themeColors;
   const styles = React.useMemo(() => getStyles(THEME), [THEME]);
   const { t } = useTranslation();
@@ -677,7 +696,7 @@ function HomeScreen({ navigation }) {
     const currentHistory = messages.slice(-6);
 
     // Create new array to immediately reflect user message
-    const newMessages = [...messages, { role: "user", text: userText }];
+    const newMessages = [...messages, { role: "user", text: userText, filter: activeFilter }];
     updateSessionMessages(newMessages);
     setIsLoading(true);
 

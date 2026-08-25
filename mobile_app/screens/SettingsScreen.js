@@ -276,17 +276,32 @@ export default function SettingsScreen({ navigation, route }) {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.toggleRow, { opacity: settings.googleConnected ? 1 : 0.5 }]}
-              disabled={!settings.googleConnected}
-              onPress={() => handleSync(null, "backup")}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="cloud-upload-outline" size={24} color={THEME.text} style={{ marginRight: 10 }} />
-                <Text style={styles.optionText}>{t("sync_now")}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
-            </TouchableOpacity>
+            {settings.googleConnected && (
+              <>
+                <View style={[styles.divider, { marginBottom: 15, marginHorizontal: -15 }]} />
+                <TouchableOpacity 
+                  style={[styles.toggleRow, { marginBottom: 15 }]}
+                  onPress={() => handleSync(null, "backup")}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="cloud-upload-outline" size={24} color={THEME.text} style={{ marginRight: 10 }} />
+                    <Text style={styles.optionText}>Backup to Drive</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.toggleRow}
+                  onPress={() => handleSync(null, "restore")}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="cloud-download-outline" size={24} color={THEME.text} style={{ marginRight: 10 }} />
+                    <Text style={styles.optionText}>Restore from Drive</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={THEME.textMuted} />
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
 
