@@ -922,17 +922,26 @@ function HomeScreen({ navigation }) {
           >
             {messages.map((msg, idx) => {
               if (msg.role === "user") {
-                return (
-                  <View
-                    key={idx}
-                    style={styles.userBubble}
-                    onLayout={(e) => {
-                      messagePositions.current[idx] = e.nativeEvent.layout.y;
-                    }}
-                  >
-                    <Text style={styles.bubbleText}>{msg.text}</Text>
-                  </View>
-                );
+                  return (
+                    <View
+                      key={idx}
+                      style={{ alignSelf: "flex-end", maxWidth: "80%", marginBottom: 20 }}
+                      onLayout={(e) => {
+                        messagePositions.current[idx] = e.nativeEvent.layout.y;
+                      }}
+                    >
+                      {msg.filter && msg.filter !== "all" && (
+                        <View style={{ backgroundColor: "rgba(100,100,100,0.3)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, alignSelf: "flex-end", marginBottom: 4 }}>
+                          <Text style={{ fontSize: 11, color: THEME.textMuted, fontWeight: 'bold', textTransform: 'uppercase' }}>
+                            {msg.filter}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={[styles.userBubble, { marginBottom: 0, maxWidth: "100%" }]}>
+                        <Text style={styles.bubbleText}>{msg.text}</Text>
+                      </View>
+                    </View>
+                  );
               } else {
                 return (
                   <View key={idx} style={styles.aiContainer}>

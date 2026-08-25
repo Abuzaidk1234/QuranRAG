@@ -35,7 +35,7 @@ export default function SettingsScreen({ navigation, route }) {
   React.useEffect(() => {
     try {
       GoogleSignin.configure({
-        scopes: ['https://www.googleapis.com/auth/drive.appdata'],
+        scopes: ['profile', 'email', 'https://www.googleapis.com/auth/drive.appdata'],
         webClientId: '167900378525-chrk02499qs8af1d54069rmtqnk4r0fr.apps.googleusercontent.com', 
       });
     } catch(e) { console.log(e); }
@@ -306,7 +306,7 @@ export default function SettingsScreen({ navigation, route }) {
                 <Ionicons name="logo-google" size={24} color={settings.googleConnected ? THEME.gold : THEME.textMuted} style={{ marginRight: 10 }} />
                 <Text style={[styles.optionText, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{t("google_sign_in")}</Text>
               </View>
-              <Text style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 14, flexShrink: 1, paddingLeft: 10, textAlign: 'right' }} numberOfLines={1} adjustsFontSizeToFit>
+              <Text style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 14, paddingLeft: 10, textAlign: 'right', maxWidth: '45%' }} numberOfLines={1} adjustsFontSizeToFit>
                   {settings.googleConnected ? t("connected") : t("not_connected")}
                 </Text>
             </TouchableOpacity>
