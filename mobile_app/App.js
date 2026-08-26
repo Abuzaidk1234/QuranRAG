@@ -1085,33 +1085,6 @@ function HomeScreen({ navigation }) {
 
 // --- App Root ---
 
-// Helper to parse basic markdown (**bold** and *italic*)
-const renderMarkdown = (text, textStyle) => {
-  if (!text) return null;
-  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
-  return parts.map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
-      return (
-        <Text key={index} style={[textStyle, { fontWeight: "bold" }]}>
-          {part.slice(2, -2)}
-        </Text>
-      );
-    } else if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
-      return (
-        <Text key={index} style={[textStyle, { fontStyle: "italic" }]}>
-          {part.slice(1, -1)}
-        </Text>
-      );
-    }
-    return (
-      <Text key={index} style={textStyle}>
-        {part}
-      </Text>
-    );
-  });
-};
-
-
 import { SettingsProvider, SettingsContext } from "./utils/SettingsContext";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 

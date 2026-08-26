@@ -309,10 +309,6 @@ export default function SettingsScreen({ navigation, route }) {
                 <Text style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 13, flexShrink: 0, paddingLeft: 10 }}>
                   {settings.googleConnected ? t("connected") : t("not_connected")}
                 </Text>
-              </View>
-              <Text style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 14, paddingLeft: 10, textAlign: 'right', maxWidth: '45%' }} numberOfLines={1} adjustsFontSizeToFit>
-                  {settings.googleConnected ? t("connected") : t("not_connected")}
-                </Text>
             </TouchableOpacity>
 
             {settings.googleConnected && (
