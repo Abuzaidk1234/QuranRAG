@@ -295,7 +295,10 @@ export default function SettingsScreen({ navigation, route }) {
                 if (!settings.googleConnected) {
                   handleGoogleLogin();
                 } else {
-                  try { await GoogleSignin.signOut(); } catch(e) {}
+                  try { 
+                    await GoogleSignin.revokeAccess();
+                    await GoogleSignin.signOut(); 
+                  } catch(e) {}
                   updateSetting("googleConnected", false);
                   updateSetting("googleAccessToken", null);
                   updateSetting("googleUserName", null);
