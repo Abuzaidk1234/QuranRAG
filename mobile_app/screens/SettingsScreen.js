@@ -302,9 +302,13 @@ export default function SettingsScreen({ navigation, route }) {
                 }
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 }}>
-                <Ionicons name="logo-google" size={24} color={settings.googleConnected ? THEME.gold : THEME.textMuted} style={{ marginRight: 10 }} />
-                <Text style={[styles.optionText, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{t("google_sign_in")}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, paddingRight: 10 }}>
+                  <Ionicons name="logo-google" size={24} color={settings.googleConnected ? THEME.gold : THEME.textMuted} style={{ marginRight: 10 }} />
+                  <Text style={[styles.optionText, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{t("google_sign_in")}</Text>
+                </View>
+                <Text style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 13, flexShrink: 0, paddingLeft: 10 }}>
+                  {settings.googleConnected ? t("connected") : t("not_connected")}
+                </Text>
               </View>
               <Text style={{ color: settings.googleConnected ? THEME.gold : THEME.textMuted, fontSize: 14, paddingLeft: 10, textAlign: 'right', maxWidth: '45%' }} numberOfLines={1} adjustsFontSizeToFit>
                   {settings.googleConnected ? t("connected") : t("not_connected")}

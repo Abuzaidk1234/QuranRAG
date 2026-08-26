@@ -945,7 +945,7 @@ function HomeScreen({ navigation }) {
               } else {
                 return (
                   <View key={idx} style={styles.aiContainer}>
-                    <Text style={styles.aiText}>{msg.text}</Text>
+                    {renderMarkdown(msg.text, styles.aiText)}
                     {/* Action Icons Row */}
                     <View style={styles.aiActionRow}>
                       <TouchableOpacity
@@ -1114,6 +1114,26 @@ const renderMarkdown = (text, textStyle) => {
 
 import { SettingsProvider, SettingsContext } from "./utils/SettingsContext";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
+
+const renderMarkdown = (text, textStyle) => {
+  if (!text) return null;
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return (
+    <Text style={textStyle}>
+      {parts.map((part, index) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return (
+            <Text key={index} style={{ fontWeight: "bold" }}>
+              {part.slice(2, -2)}
+            </Text>
+          );
+        }
+        return <Text key={index}>{part}</Text>;
+      })}
+    </Text>
+  );
+};
 
 const Stack = createNativeStackNavigator();
 
