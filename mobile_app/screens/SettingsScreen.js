@@ -45,14 +45,18 @@ export default function SettingsScreen({ navigation, route }) {
       try {
         await GoogleSignin.hasPlayServices();
         try { await GoogleSignin.signOut(); } catch(e) {} // Force clear local session to ensure OAuth prompt
-      const userInfo = await GoogleSignin.signIn();
-      const tokens = await GoogleSignin.getTokens();
-      
-      updateSetting('googleConnected', true);
-      updateSetting('googleAccessToken', tokens.accessToken);
-      if (userInfo && userInfo.user && userInfo.user.name) {
-        updateSetting('googleUserName', userInfo.user.name);
-      }
+      const response = await GoogleSignin.signIn();
+        const tokens = await GoogleSignin.getTokens();
+        
+        updateSetting('googleConnected', true);
+        updateSetting('googleAccessToken', tokens.accessToken);
+        
+        // v16 API structure: response.data.user
+        // v10 API fallback: response.user
+        const userObj = response?.data?.user || response?.user;
+        if (userObj && userObj.name) {
+          updateSetting('googleUserName', userObj.name);
+        }
       
       Alert.alert(
         "Connected!", 
@@ -64,7 +68,8 @@ export default function SettingsScreen({ navigation, route }) {
       );
     } catch (error) {
       console.log(error);
-      Alert.alert("Login Failed", "Could not sign in to Google. Ensure your Google account is set up on this device.");
+      Alert.alert("Login Failed", `Error: ${error.message || JSON.stringify(error)}
+Please ensure your SHA-1 is correctly added in Google Cloud Console.`);
     }
   };
 
@@ -72,10 +77,11 @@ export default function SettingsScreen({ navigation, route }) {
     if (settings.googleConnected && !settings.googleUserName) {
       const fetchName = async () => {
         try {
-          const userInfo = await GoogleSignin.signInSilently();
-          if (userInfo && userInfo.user && userInfo.user.name) {
-            updateSetting('googleUserName', userInfo.user.name);
-          }
+          const response = await GoogleSignin.signInSilently();
+            const userObj = response?.data?.user || response?.user;
+            if (userObj && userObj.name) {
+              updateSetting('googleUserName', userObj.name);
+            }
         } catch (e) {
           console.log("Could not fetch silent user info", e);
         }
