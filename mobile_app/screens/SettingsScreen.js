@@ -42,8 +42,9 @@ export default function SettingsScreen({ navigation, route }) {
   }, []);
 
   const handleGoogleLogin = async () => {
-    try {
-      await GoogleSignin.hasPlayServices();
+      try {
+        await GoogleSignin.hasPlayServices();
+        try { await GoogleSignin.signOut(); } catch(e) {} // Force clear local session to ensure OAuth prompt
       const userInfo = await GoogleSignin.signIn();
       const tokens = await GoogleSignin.getTokens();
       
@@ -109,8 +110,9 @@ export default function SettingsScreen({ navigation, route }) {
           updateSetting('googleAccessToken', token);
         } catch (err) {
           console.log(err);
-          Alert.alert("Sync Error", "Authentication expired. Please reconnect your Google account.");
-          updateSetting('googleConnected', false);
+          try { await GoogleSignin.revokeAccess(); await GoogleSignin.signOut(); } catch(clearErr) {}
+            Alert.alert("Sync Error", "Authentication expired. Local cache cleared. Please sign in again.");
+            updateSetting('googleConnected', false);
           return;
         }
       }
@@ -130,8 +132,9 @@ export default function SettingsScreen({ navigation, route }) {
       }
     } catch (e) {
       console.log(e);
-      Alert.alert("Sync Error", "Authentication expired. Please reconnect your Google account.");
-      updateSetting('googleConnected', false);
+      try { await GoogleSignin.revokeAccess(); await GoogleSignin.signOut(); } catch(clearErr) {}
+            Alert.alert("Sync Error", "Authentication expired. Local cache cleared. Please sign in again.");
+            updateSetting('googleConnected', false);
     }
   };
 
