@@ -715,6 +715,10 @@ function HomeScreen({ navigation }) {
         filter: activeFilter,
         language: i18n.language,
         history: currentHistory,
+      }, {
+        headers: {
+          "x-app-secret": "quranrag_mobile_secret_2026"
+        }
       });
 
       let finalAnswer = response.data.answer || "";
@@ -824,8 +828,7 @@ function HomeScreen({ navigation }) {
                   styles.greeting,
                   {
                     fontSize: i18n.language === "ur" ? 28 : 24,
-                    width: "80%",
-                    paddingHorizontal: 20,
+                    
                   },
                 ]}
                 adjustsFontSizeToFit
@@ -1175,7 +1178,7 @@ const getStyles = (THEME) => StyleSheet.create({
   container: { flex: 1, backgroundColor: THEME.bg },
   header: {
     paddingHorizontal: 25,
-    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingTop: Platform.OS === "ios" ? 50 : 45,
     paddingBottom: 10,
     flexDirection: "row",
     alignItems: "center",
@@ -1268,7 +1271,7 @@ const getStyles = (THEME) => StyleSheet.create({
     top: 0,
     width: "100%",
     paddingHorizontal: 25,
-    paddingTop: Platform.OS === "ios" ? 50 : 20, // push down slightly for safe area
+    paddingTop: Platform.OS === "ios" ? 50 : 45, // push down slightly for safe area
     paddingBottom: 10,
     flexDirection: "row",
     alignItems: "center",
@@ -1398,7 +1401,7 @@ const getStyles = (THEME) => StyleSheet.create({
     maxHeight: "80%",
     borderRadius: 20,
     paddingHorizontal: 25,
-    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingTop: Platform.OS === "ios" ? 50 : 45,
     paddingBottom: 15,
   },
   modalHeader: {

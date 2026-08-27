@@ -1367,7 +1367,7 @@ export default function QuranScreen({ navigation }) {
       </View>
 
       {(selectedSurah || juzData) ? (
-        <View style={[styles.floatingHeader, { backgroundColor: THEME.bg, paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 15 }]}>
+        <View style={[styles.floatingHeader, { backgroundColor: THEME.bg, paddingTop: Platform.OS === "ios" ? 50 : 45, paddingBottom: 15 }]}>
           {selectedSurah ? (
           <View style={{ width: "100%", position: "relative" }}>
             <View
@@ -1746,7 +1746,7 @@ const getStyles = (THEME) => StyleSheet.create({
   ayahRow: {
     flexDirection: "row",
     paddingHorizontal: 25,
-    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingTop: Platform.OS === "ios" ? 50 : 45,
     paddingBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: "#222",

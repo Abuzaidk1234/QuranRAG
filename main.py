@@ -8,7 +8,7 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["ONNXRUNTIME_MAX_THREADS"] = "1"
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -30,6 +30,16 @@ set_llm_cache(InMemoryCache())
 load_dotenv()
 
 app = FastAPI(title="Quran & Hadith RAG API")
+
+# --- BOT PROTECTION ---
+API_SECRET_KEY = os.getenv("API_SECRET_KEY", "quranrag_mobile_secret_2026")
+
+async def verify_api_key(x_app_secret: str = Header(None)):
+    if not x_app_secret or x_app_secret != API_SECRET_KEY:
+        raise HTTPException(status_code=403, detail="Forbidden: Invalid API Secret Key")
+    return x_app_secret
+
+
 
 # Add CORS Middleware to allow web frontend to talk to backend
 app.add_middleware(
@@ -153,7 +163,7 @@ def get_llm(provider: str):
         raise ValueError(f"Unsupported AI provider: {provider}")
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+async def chat(request: ChatRequest, secret: str = Depends(verify_api_key)):
     if not qdrant_store:
         raise HTTPException(status_code=500, detail="Qdrant store is not initialized. Check your credentials.")
         

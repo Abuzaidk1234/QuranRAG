@@ -599,7 +599,7 @@ export default function HadithScreen({ navigation }) {
 
       {/* Floating Header */}
       {selectedChapter ? (
-        <View style={[styles.floatingHeader, { backgroundColor: THEME.bg, paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 15 }]}>
+        <View style={[styles.floatingHeader, { backgroundColor: THEME.bg, paddingTop: Platform.OS === "ios" ? 50 : 45, paddingBottom: 15 }]}>
           {selectedBook ? (
           <View style={[styles.headerRow, { justifyContent: "space-between" }]}>
             <TouchableOpacity onPress={goBack} style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
@@ -838,7 +838,7 @@ const getStyles = (THEME) => StyleSheet.create({
     marginBottom: 30,
     backgroundColor: THEME.inputBg,
     paddingHorizontal: 25,
-    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingTop: Platform.OS === "ios" ? 50 : 45,
     paddingBottom: 15,
     borderRadius: 15,
   },

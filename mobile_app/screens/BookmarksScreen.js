@@ -167,7 +167,7 @@ const getStyles = (THEME, settings) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.bg,
-    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingTop: Platform.OS === "ios" ? 50 : 45,
   },
   toggleContainer: {
     marginTop: 80,
