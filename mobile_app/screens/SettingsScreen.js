@@ -283,14 +283,14 @@ Please ensure your SHA-1 is correctly added in Google Cloud Console.`);
               onPress={() => updateSetting("arabicScript", "uthmani")}
             >
               <Text style={[styles.scriptBtnText, settings.arabicScript === "uthmani" && styles.scriptBtnTextActive]} numberOfLines={1} adjustsFontSizeToFit>{t("uthmani")}</Text>
-              <Text style={{ color: THEME.text, fontSize: 22, marginTop: 10, textAlign: 'center' }}>بِسْمِ ٱللَّهِ</Text>
+              <Text style={{ color: THEME.text, fontSize: 18, marginTop: 10, textAlign: 'center' }} numberOfLines={1} adjustsFontSizeToFit>بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.scriptBtn, settings.arabicScript === "indoPak" && styles.scriptBtnActive]}
               onPress={() => updateSetting("arabicScript", "indoPak")}
             >
               <Text style={[styles.scriptBtnText, settings.arabicScript === "indoPak" && styles.scriptBtnTextActive]} numberOfLines={1} adjustsFontSizeToFit>{t("indo_pak")}</Text>
-              <Text style={{ color: THEME.text, fontSize: 22, marginTop: 10, textAlign: 'center' }}>بِسْمِ اللّٰهِ</Text>
+              <Text style={{ color: THEME.text, fontSize: 18, marginTop: 10, textAlign: 'center' }} numberOfLines={1} adjustsFontSizeToFit>بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -349,6 +349,25 @@ Please ensure your SHA-1 is correctly added in Google Cloud Console.`);
                 </TouchableOpacity>
               </>
             )}
+          </View>
+        </View>
+
+
+        {/* --- FOOTER: MADE BY ABUZAID --- */}
+        <View style={{ alignItems: "center", marginTop: 50, paddingBottom: 20, width: "100%" }}>
+          <Text style={{ color: THEME.textMuted, fontSize: 14, textAlign: "center", flexWrap: "wrap", width: "100%" }}>
+            {t("made_by_abuzaid")}
+          </Text>
+          <View style={{ flexDirection: "row", marginTop: 15, alignItems: "center", justifyContent: "center" }}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://github.com/Abuzaidk1234')}>
+              <Text style={{ color: THEME.gold, fontSize: 15, fontWeight: "bold" }}>GitHub</Text>
+            </TouchableOpacity>
+
+            <Text style={{ color: THEME.textMuted, marginHorizontal: 20 }}>|</Text>
+
+            <TouchableOpacity onPress={() => Linking.openURL('https://www.linkedin.com/in/abuzaid-khan-b08998279/')}>
+              <Text style={{ color: THEME.gold, fontSize: 15, fontWeight: "bold" }}>LinkedIn</Text>
+            </TouchableOpacity>
           </View>
         </View>
 

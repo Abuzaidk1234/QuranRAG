@@ -1,87 +1,71 @@
-# Quran & Hadith RAG API
+# Bayan (بیان) - AI-Powered Islamic Assistant
 
-This is a free-to-build Retrieval-Augmented Generation (RAG) backend for querying the Quran and authentic Hadiths using Python, FastAPI, ChromaDB, and Google Gemini.
+![Bayan Banner](https://img.shields.io/badge/Status-Release_Ready-success?style=for-the-badge)
+![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-blue?style=for-the-badge)
+![Tech](https://img.shields.io/badge/Framework-React_Native-61DAFB?style=for-the-badge&logo=react)
 
-## Features
-- **100% Free**: Uses local vector database (ChromaDB), free embedding models (HuggingFace `all-MiniLM-L6-v2`), and the free tier of the Gemini API.
-- **Authentic Only**: Ingests the entire Quran and filters Hadiths (Bukhari, Muslim, Abu Dawud, Tirmidhi, Nasai, Ibn Majah) to include only "Sahih" and "Hasan" (authentic/good) gradings.
-- **API First**: The `main.py` runs a FastAPI server, making it fully compatible with any Web frontend (React, Next.js) or Mobile app (Flutter, React Native).
-- **Streamlit MVP**: Includes a quick `app.py` UI to test the RAG pipeline over a web browser.
+**Bayan** is a fully-featured, AI-powered Islamic assistant available as a mobile application. It features a highly accurate Retrieval-Augmented Generation (RAG) backend utilizing Qdrant and LLaMA 3 via Groq to provide authentic answers from the Qur'an and authentic Hadith collections. 
 
-## Getting Started
+## 🌟 Key Features
 
-### 1. Prerequisites
-Ensure you have Python 3.10+ installed.
-Set up your virtual environment and install dependencies:
+*   **AI Chat Assistant**: Ask any question and receive accurate, referenced answers from authentic sources.
+*   **Authentic Sources Only**: The knowledge base is strictly filtered to include the Qur'an and authentic (Sahih/Hasan) Hadith.
+*   **Dual-Script Support**: Seamlessly switch between the **Uthmani** and **Indo-Pak** Arabic scripts for reading.
+*   **Bilingual**: Full support for both **English** and **Urdu** throughout the UI and Chat.
+*   **Google Drive Backup**: Safely backup and restore your chat history directly to your personal Google Drive.
+*   **Customizable UI**: Choose between Light, Dark, or System themes. Adjust translation and Arabic font sizes for maximum readability.
+
+---
+
+## 📱 Mobile App (Frontend)
+
+The frontend is built with **React Native (Expo)**, offering a smooth, native experience for both Android and iOS devices. 
+
+### Quick Start (Mobile)
+To run the mobile app locally:
 ```bash
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
+cd mobile_app
+npm install
+npx expo start
 ```
-
-### 2. Download Data
-Download the JSON datasets for the Quran and Hadiths:
+*To build the production APK/AAB for Android:*
 ```bash
-python download_data.py
-```
-*Note: This will download several JSON files into the `data/` directory.*
-
-### 3. Setup Environment Variables
-Copy the `.env.example` file to `.env` and add your Google Gemini API Key.
-```bash
-copy .env.example .env
-```
-*(Get a free API key from [Google AI Studio](https://aistudio.google.com/))*
-
-### 4. Build the Knowledge Base
-Run the ingestion script to convert all text into vectors and save them into the local ChromaDB. **This might take a few minutes to run** as it computes embeddings for thousands of Ayahs and Hadiths.
-```bash
-python ingest.py
-```
-
-### 5. Run the Backend Server
-Start the FastAPI backend:
-```bash
-uvicorn main:app --reload
-```
-The API will run at `http://localhost:8000`. You can view the automatic API documentation at `http://localhost:8000/docs`.
-
-### 6. Run the Frontend MVP
-In a separate terminal, run the Streamlit web app to test your assistant:
-```bash
-streamlit run app.py
+cd mobile_app
+npx expo prebuild
+cd android
+.\gradlew.bat assembleRelease   # For local APK
+.\gradlew.bat bundleRelease     # For Play Store AAB
 ```
 
 ---
 
-## Connecting Your Mobile App
+## ⚙️ RAG Backend (API)
 
-Because this is a FastAPI backend, connecting your mobile app (e.g., Flutter) is incredibly simple. You just need to make a POST request to the `/chat` endpoint.
+The backend is a **FastAPI** application that orchestrates the RAG pipeline. It leverages **Groq** for lightning-fast LLaMA 3 inference and **Qdrant** for vector search over our Islamic knowledge base.
 
-### Example Request (Dart/Flutter)
-```dart
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-
-Future<void> askAssistant(String question) async {
-  final url = Uri.parse('http://YOUR_SERVER_IP:8000/chat');
-  final response = await http.post(
-    url,
-    headers: {"Content-Type": "application/json"},
-    body: jsonEncode({"query": question}),
-  );
-
-  if (response.statusCode == 200) {
-    final data = jsonDecode(response.body);
-    print("Answer: ${data['answer']}");
-    // You can also access data['sources'] to display references
-  } else {
-    print("Error: ${response.statusCode}");
-  }
-}
+### Quick Start (Backend)
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+2. Set up your `.env` file with your `GROQ_API_KEY` and `QDRANT_API_KEY`.
+3. Run the server:
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## Deployment Options (Free)
-1. **Render (Web Service)**: Deploy your FastAPI backend to Render's free tier. 
-2. **Streamlit Community Cloud**: Deploy `app.py` for free.
-3. **Pinecone/Qdrant**: If ChromaDB becomes too large for free cloud hosting, change the `ingest.py` and `main.py` to use Pinecone's serverless free tier.
+---
+
+## 🔒 Privacy & Data Safety
+
+Bayan prioritizes user privacy. We do not store your chat logs on our servers. All chat history is stored locally on your device (SQLite) and can be securely backed up exclusively to your own personal Google Drive via our OAuth integration.
+
+*Read our full [Privacy Policy](./privacy-policy.md).*
+
+---
+
+## 👨‍💻 Developer
+
+**Made with ❤️ by Abuzaid**
+*   [GitHub](https://github.com/Abuzaidk1234)
+*   [LinkedIn](https://www.linkedin.com/in/abuzaid-khan-b08998279/)

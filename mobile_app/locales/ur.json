@@ -448,7 +448,7 @@
     "ayah": "آیت",
     "reply": "جواب دیں...",
     "references_sources": "حوالہ جات اور ذرائع",
-    "app_name": "رہنورد",
+    "app_name": "بیان",
     "guest_user": "مہمان",
     "everything": "سب کچھ",
     "reading_preferences": "پڑھنے کی ترجیحات",
@@ -470,6 +470,7 @@
     "daily_reminder": "روزانہ کی یاد دہانی",
     "jumuah_reminder": "جمعہ کی یاد دہانی",
     "not_connected": "منسلک نہیں ہے",
-    "connected": "منسلک ہے"
+    "connected": "منسلک ہے",
+    "made_by_abuzaid": "ابو زید کی جانب سے تیار کردہ"
   }
 }

@@ -448,7 +448,7 @@
     "ayah": "Ayah",
     "reply": "Reply...",
     "references_sources": "References & Sources",
-    "app_name": "Rahnavard",
+    "app_name": "Bayan",
     "guest_user": "Guest",
     "everything": "Everything",
     "reading_preferences": "Reading Preferences",
@@ -470,6 +470,7 @@
     "daily_reminder": "Daily Reminder",
     "jumuah_reminder": "Jumu'ah Reminder",
     "not_connected": "Not Connected",
-    "connected": "Connected"
+    "connected": "Connected",
+    "made_by_abuzaid": "Made by Abuzaid"
   }
 }
