@@ -818,7 +818,7 @@ function HomeScreen({ navigation }) {
                 height: 130,
                 justifyContent: "center",
                 alignItems: "center",
-                marginBottom: 20,
+                marginBottom: 150,
               }}
               imageStyle={{ tintColor: THEME.gold }}
               resizeMode="contain"
@@ -1193,6 +1193,7 @@ const getStyles = (THEME) => StyleSheet.create({
     fontWeight: "bold",
     color: THEME.text,
     textAlign: "center",
+    paddingBottom:0,
   },
   searchContainer: {
     flexDirection: "column",

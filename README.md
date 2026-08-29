@@ -46,11 +46,13 @@ The backend is a **FastAPI** application that orchestrates the RAG pipeline. It 
 ### Quick Start (Backend)
 1. Install dependencies:
 ```bash
+cd backend
 pip install -r requirements.txt
 ```
 2. Set up your `.env` file with your `GROQ_API_KEY` and `QDRANT_API_KEY`.
 3. Run the server:
 ```bash
+cd backend
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
