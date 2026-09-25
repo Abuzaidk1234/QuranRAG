@@ -1,8 +1,8 @@
 import React, { useMemo, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Switch } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Switch, Linking, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Alert } from "react-native";
+import * as WebBrowser from 'expo-web-browser';
 
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { syncToDrive, syncFromDrive } from '../utils/GoogleDriveSync';
@@ -26,6 +26,18 @@ export default function SettingsScreen({ navigation, route }) {
 
   const changeLanguage = (lang) => {
     i18n.changeLanguage(lang);
+  };
+
+  const handleOpenURL = async (url) => {
+    try {
+      await WebBrowser.openBrowserAsync(url);
+    } catch (err) {
+      try {
+        await Linking.openURL(url);
+      } catch (e) {
+        Alert.alert("Error", "Could not open link: " + url);
+      }
+    }
   };
 
   
@@ -359,13 +371,13 @@ Please ensure your SHA-1 is correctly added in Google Cloud Console.`);
             {t("made_by_abuzaid")}
           </Text>
           <View style={{ flexDirection: "row", marginTop: 15, alignItems: "center", justifyContent: "center" }}>
-            <TouchableOpacity onPress={() => Linking.openURL('https://github.com/Abuzaidk1234')}>
+            <TouchableOpacity onPress={() => handleOpenURL('https://github.com/Abuzaidk1234')} activeOpacity={0.7} style={{ padding: 6 }}>
               <Text style={{ color: THEME.gold, fontSize: 15, fontWeight: "bold" }}>GitHub</Text>
             </TouchableOpacity>
 
-            <Text style={{ color: THEME.textMuted, marginHorizontal: 20 }}>|</Text>
+            <Text style={{ color: THEME.textMuted, marginHorizontal: 15 }}>|</Text>
 
-            <TouchableOpacity onPress={() => Linking.openURL('https://www.linkedin.com/in/abuzaid-khan-b08998279/')}>
+            <TouchableOpacity onPress={() => handleOpenURL('https://www.linkedin.com/in/abuzaid-khan-b08998279/')} activeOpacity={0.7} style={{ padding: 6 }}>
               <Text style={{ color: THEME.gold, fontSize: 15, fontWeight: "bold" }}>LinkedIn</Text>
             </TouchableOpacity>
           </View>
